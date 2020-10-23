@@ -76,6 +76,23 @@ _Packages should still be used for third party projects or projects no longer in
 - c# [.NET standard 2.0](https://docs.microsoft.com/en-us/dotnet/standard/net-standard)
 - Library uses [LibGit2Sharp](https://github.com/libgit2/libgit2sharp/). Tested on public and private repos. Supports 2FA.
 
+
+# Dependency Schema
+Each dependency that you add is encoded into a json file (Dependecies.json) which is stored in the root of the repositories folder. Each entry looks as follows:
+
+```
+{
+    "Name": "InputModule",
+    "SubFolder": "Assets/Lib",
+    "Url": "https://github.com/RenderHeads/Lib-InputModule",
+    "Branch": "master"
+}
+```
+-  "Name"  - the name of the module you are adding as a depednency
+-  "SubFolder" - the subfolder within the repo you wan to check out
+-  "Url" - The url of the repo to check out
+- "Branch" - the branch in the repo you are checking out.
+
 # Contributing
 
 This project is in the early stages, there are many easy bugs to squash and many features that would be useful. Ill outline issues as they become apparent.
