@@ -27,7 +27,7 @@ This is a tool for working on many repositories at once and pushing changes back
   - copy Assets/Package anywhere under your project's Assets folder.
   - _if you want to contribute to the plugin development you will need to work directly in the cloned repository_
   
-### Manual Self-Bootsrap Install
+### Manual Self-Bootstrap Install
 
 - Download this repository.
   - copy "Assets/Package" it into an empty directory structure: "Assets/Repositories/RepositoryManager"
