@@ -131,11 +131,6 @@ namespace GitRepositoryManager
 			}
 		}
 
-		public void OpenTerminal()
-		{
-			GitProcessHelper.OpenRepositoryInTerminal(_state.RootFolder, _state.RepositoryFolder);
-		}
-
 		public void PushChanges()
 		{
 			ThreadPool.QueueUserWorkItem(PushTask, _state);

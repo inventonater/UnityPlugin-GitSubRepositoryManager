@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ContentModelStore">
-    <e p="C:\Projects\Ross\UnityGitRepositoryManager" t="IncludeRecursive">
+    <e p="C:\Projects\Core\UnityGitRepositoryManager" t="IncludeRecursive">
       <e p="Assembly-CSharp-Editor.csproj" t="IncludeRecursive" />
       <e p="Assembly-CSharp.csproj" t="IncludeRecursive" />
       <e p="Assets" t="Include">
@@ -14,6 +14,7 @@
           </e>
           <e p="GitSubmoduleManager.Editor.asmdef" t="Include" />
           <e p="GUI" t="Include">
+            <e p="GUIPushPanel.cs" t="Include" />
             <e p="GUIRepositoryManagerWindow.cs" t="Include" />
             <e p="GUIRepositoryPanel.cs" t="Include" />
             <e p="GUIUtility.cs" t="Include" />
@@ -40,6 +41,6 @@
     </e>
     <e p="C:\Users\Renderheads 1\.Rider2019.3\config\extensions" t="IncludeRecursive" />
     <e p="C:\Users\Renderheads 1\.Rider2019.3\system\extResources" t="IncludeRecursive" />
-    <e p="C:\Users\Renderheads 1\.Rider2019.3\system\resharper-host\local\Transient\ReSharperHost\v193\SolutionCaches\_UnityGitRepositoryManager.1591149256.00" t="ExcludeRecursive" />
+    <e p="C:\Users\Renderheads 1\.Rider2019.3\system\resharper-host\local\Transient\ReSharperHost\v193\SolutionCaches\_UnityGitRepositoryManager.1771602698.00" t="ExcludeRecursive" />
   </component>
 </project>

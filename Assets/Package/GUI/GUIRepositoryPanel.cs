@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEditor;
+using UnityEditor.AnimatedValues;
 using UnityEditor.Graphs;
 using UnityEditor.PackageManager;
 using UnityEngine;
@@ -26,15 +27,18 @@ namespace GitRepositoryManager
 
 		public event Action<GUIRepositoryPanel[]> OnRefreshRequested = delegate { };
 
+		public event Action OnRepaintRequested = delegate { };
+
 		//Note this updates the UI but its not serialized and should not be used for any buisiness logic.
 		//This is set when an update attempt occurs, or when we the assembly is reloaded.
 		private bool _hasLocalChanges;
 
 		private Texture2D _editIcon;
 		private Texture2D _removeIcon;
-		private Texture2D _openTerminalIcon;
 		private Texture2D _pushIcon;
 		private Texture2D _pullIcon;
+
+		public AnimBool _expandableAreaAnimBool;
 
 		public string RootFolder()
 		{
@@ -51,6 +55,8 @@ namespace GitRepositoryManager
 		{
 			return $"{RelativeRepositoryPath()}/{DependencyInfo.SubFolder}";
 		}
+
+		private string ExpandableAreaIdentifier => $"GUIRepo_ExpandableArea_{DependencyInfo.Url}_{DependencyInfo.Branch}_{DependencyInfo.SubFolder}";
 
 		public bool HasLocalChanges(bool useCached = false)
 		{
@@ -124,7 +130,7 @@ namespace GitRepositoryManager
 			}
 		}
 
-		public GUIRepositoryPanel(Dependency info, Texture2D editIcon, Texture2D removeIcon, Texture2D pushIcon, Texture2D pullIcon, Texture2D openTerminalIcon)
+		public GUIRepositoryPanel(Dependency info, Texture2D editIcon, Texture2D removeIcon, Texture2D pushIcon, Texture2D pullIcon)
 		{
 			DependencyInfo = info;
 
@@ -135,7 +141,10 @@ namespace GitRepositoryManager
 			_removeIcon = removeIcon;
 			_pushIcon = pushIcon;
 			_pullIcon = pullIcon;
-			_openTerminalIcon = openTerminalIcon;
+
+			bool previouslyOpen = EditorPrefs.GetBool(ExpandableAreaIdentifier, false);
+			_expandableAreaAnimBool = new AnimBool(previouslyOpen);
+			_expandableAreaAnimBool.valueChanged.AddListener(() => { OnRepaintRequested(); });
 		}
 
 		public bool Update()
@@ -157,7 +166,8 @@ namespace GitRepositoryManager
 
 		public void OnDrawGUI(int index)
 		{
-			Rect headerRect = EditorGUILayout.GetControlRect();
+			float expandWindowSize = 60;
+			Rect headerRect = EditorGUILayout.GetControlRect(GUILayout.Height(18 + _expandableAreaAnimBool.faded * expandWindowSize));
 			Rect fullRect = new Rect();
 			Rect bottomRect = new Rect();
 
@@ -184,18 +194,18 @@ namespace GitRepositoryManager
 			Rect pushButtonRect = pullButtonRect;
 			pushButtonRect.x = headerRect.width - 40;
 
-			Rect openTerminalRect = pushButtonRect;
-			openTerminalRect.x = headerRect.width - 60;
+			//Rect openTerminalRect = pushButtonRect;
+			//openTerminalRect.x = headerRect.width - 60;
 
-			Rect editButtonRect = openTerminalRect;
-			editButtonRect.x = headerRect.width - 80;
+			Rect editButtonRect = pushButtonRect;
+			editButtonRect.x = headerRect.width - 60;
 
 			Rect removeButtonRect = editButtonRect;
-			removeButtonRect.x = headerRect.width - 100;
+			removeButtonRect.x = headerRect.width - 80;
 
 			Rect localChangesRect = removeButtonRect;
 			localChangesRect.width = 10;
-			localChangesRect.x = headerRect.width - 110;
+			localChangesRect.x = headerRect.width - 90;
 			//Expanded rect
 
 			Rect gitBashRect = bottomRect;
@@ -241,18 +251,19 @@ namespace GitRepositoryManager
 				failureStyle.richText = true;
 				failureStyle.alignment = TextAnchor.MiddleRight;
 				GUI.Label(labelRect, new GUIContent("<b><color=red>Failure</color></b>", lastProgress.Message), failureStyle);
-				if (GUI.Button(pullButtonRect, "Retry", EditorStyles.miniButton))
-				{
-					UpdateRepository();
-				};
 			}
-			else
+
+			if (!_repo.InProgress)
 			{
 				DrawUpdateButton(pullButtonRect);
 			}
 
 			GUIStyle iconButtonStyle = new GUIStyle( EditorStyles.miniButton);
 			iconButtonStyle.padding = new RectOffset(3,3,3,3);
+
+			GUIStyle toggledIconButtonStyle = new GUIStyle( EditorStyles.miniButton);
+			toggledIconButtonStyle.padding = new RectOffset(2,2,2,2);
+
 			if (!_repo.InProgress && GUI.Button(removeButtonRect, new GUIContent(_removeIcon, "Remove the repository from this project."), iconButtonStyle))
 			{
 				if (EditorUtility.DisplayDialog("Remove " + DependencyInfo.Name + "?", "\nThis will remove the repository from the project.\n" +
@@ -261,7 +272,7 @@ namespace GitRepositoryManager
 					OnRemovalRequested(DependencyInfo.Name, DependencyInfo.Url, RelativeRepositoryPath());
 				}
 			};
-			if (!_repo.InProgress && GUI.Button(editButtonRect, new GUIContent(_editIcon, "Edit this repository."), iconButtonStyle))
+			if (!_repo.InProgress && GUI.Button(editButtonRect, new GUIContent(_editIcon, "Edit this repository"), iconButtonStyle))
 			{
 				OnEditRequested(DependencyInfo, RelativeRepositoryPath());
 			};
@@ -269,17 +280,14 @@ namespace GitRepositoryManager
 			{
 				GUI.enabled = false;
 			}
-			if (!_repo.InProgress && GUI.Button(pushButtonRect, new GUIContent(_pushIcon, "Push changes."), iconButtonStyle))
+
+			GUIStyle togglePushButtonStyle = _expandableAreaAnimBool.value?toggledIconButtonStyle:iconButtonStyle;
+			if (!_repo.InProgress && GUI.Button(pushButtonRect, new GUIContent(_pushIcon, "Push changes"), togglePushButtonStyle))
 			{
-				PushRepositoryChanges();
+				OpenPushWindow();
 			};
 
 			GUI.enabled = true;
-
-			if (!_repo.InProgress && GUI.Button(openTerminalRect, new GUIContent(_openTerminalIcon, "Open Terminal."), iconButtonStyle))
-			{
-				OpenInTerminal();
-			};
 
 			GUIStyle labelStyle = new GUIStyle(EditorStyles.label);
 			labelStyle.richText = true;
@@ -293,15 +301,12 @@ namespace GitRepositoryManager
 				_repo.RefreshPending = false;
 			}
 
-			//Draw expanded content
-			//if (expand)
-			//{
-				//if (GUI.Button(gitBashRect, new GUIContent("Git Bash", "Open git bash to perform more advanced operations"),
-				//	EditorStyles.miniButton))
-				//{
 
-				//}
-			//}*/
+			if (EditorGUILayout.BeginFadeGroup(_expandableAreaAnimBool.faded))
+			{
+
+			}
+			EditorGUILayout.EndFadeGroup();
 
 			//TODO: when we edit a repo we want to remove and re-download it.
 			//TODO: or re-update it if the url and root folder has not changed
@@ -340,15 +345,10 @@ namespace GitRepositoryManager
 			_repo.TryUpdate();
 		}
 
-		public void OpenInTerminal()
+		public void OpenPushWindow()
 		{
-			_repo.OpenTerminal();
+			_expandableAreaAnimBool.target = !_expandableAreaAnimBool.target;
+			EditorPrefs.SetBool(ExpandableAreaIdentifier, _expandableAreaAnimBool.target);
 		}
-
-		public void PushRepositoryChanges()
-		{
-			_repo.PushChanges();
-		}
-
 	}
 }

@@ -65,7 +65,6 @@ namespace GitRepositoryManager
 		private Texture2D _removeIcon;
 		private Texture2D _pushIcon;
 		private Texture2D _pullIcon;
-		private Texture2D _openTerminalIcon;
 
 		private void LoadAssets()
 		{
@@ -73,7 +72,6 @@ namespace GitRepositoryManager
 			_removeIcon = Resources.Load("RepositoryManager/" + "Remove") as Texture2D;
 			_pushIcon = Resources.Load("RepositoryManager/" + "Push") as Texture2D;
 			_pullIcon = Resources.Load("RepositoryManager/" + "Pull") as Texture2D;
-			_openTerminalIcon = Resources.Load("RepositoryManager/" + "Terminal") as Texture2D;
 		}
 
 		private void UpdateDependencies(List<Dependency> updatedDependencies = null)
@@ -119,13 +117,14 @@ namespace GitRepositoryManager
 			{
 				if (_repoPanels.FindAll(p => dependency.Url == p.DependencyInfo.Url).Count == 0)
 				{
-					GUIRepositoryPanel panel = new  GUIRepositoryPanel(dependency, _editIcon, _removeIcon, _pushIcon, _pullIcon, _openTerminalIcon);
+					GUIRepositoryPanel panel = new  GUIRepositoryPanel(dependency, _editIcon, _removeIcon, _pushIcon, _pullIcon);
 					panel.OnRemovalRequested += OnPanelRemovalRequested;
 					panel.OnRefreshRequested += (updatedRepos) =>
 					{
 						UpdateAssetDatabaseAndTakeSnapshots(updatedRepos);
 					};
 					panel.OnEditRequested += OnPanelEditRequested;
+					panel.OnRepaintRequested += Repaint;
 					_repoPanels.Add(panel);
 				}
 			}

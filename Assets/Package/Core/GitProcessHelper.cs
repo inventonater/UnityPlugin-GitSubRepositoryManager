@@ -41,7 +41,7 @@ namespace GitRepositoryManager
                 return false;
             }
 
-            success = Directory.Exists(Path.Combine(directory,".git"));
+            success = Directory.Exists(Path.Combine(directory,".git")) || Directory.Exists(Path.Combine(directory,".gitsubrepository"));
             if (success)
             {
                 onProgress(false, $"Repository is valid: {directory}");
@@ -141,18 +141,6 @@ namespace GitRepositoryManager
         }
 
         public static void OpenRepositoryInExplorer(string rootDirectory, string repositoryDirectory)
-        {
-            string path = $"{rootDirectory}/{repositoryDirectory}";
-            Process.Start(new ProcessStartInfo()
-            {
-                FileName = path,
-                UseShellExecute = true,
-                Verb = "open"
-            });
-            //Leave the process running. User should close it manually.
-        }
-
-        public static void OpenRepositoryInTerminal(string rootDirectory, string repositoryDirectory)
         {
             string path = $"{rootDirectory}/{repositoryDirectory}";
             Process.Start(new ProcessStartInfo()
