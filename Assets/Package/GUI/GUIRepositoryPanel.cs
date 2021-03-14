@@ -40,6 +40,8 @@ namespace GitRepositoryManager
 
 		public AnimBool _expandableAreaAnimBool;
 
+		private GUIPushPanel _pushPanel;
+
 		public string RootFolder()
 		{
 			string fullPath = Application.dataPath;
@@ -166,8 +168,7 @@ namespace GitRepositoryManager
 
 		public void OnDrawGUI(int index)
 		{
-			float expandWindowSize = 60;
-			Rect headerRect = EditorGUILayout.GetControlRect(GUILayout.Height(18 + _expandableAreaAnimBool.faded * expandWindowSize));
+			Rect headerRect = EditorGUILayout.GetControlRect(GUILayout.Height(18));
 			Rect fullRect = new Rect();
 			Rect bottomRect = new Rect();
 
@@ -304,7 +305,14 @@ namespace GitRepositoryManager
 
 			if (EditorGUILayout.BeginFadeGroup(_expandableAreaAnimBool.faded))
 			{
-
+				if (_pushPanel == null)
+				{
+					_pushPanel = new GUIPushPanel(_repo.Branch, (branch, message) =>
+					{
+						_repo.PushChanges(branch, message);
+					});
+				}
+				_pushPanel.OnDrawGUI();
 			}
 			EditorGUILayout.EndFadeGroup();
 

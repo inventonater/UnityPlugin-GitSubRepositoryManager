@@ -127,6 +127,22 @@ namespace GitRepositoryManager
 
             SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
         }
+        
+        public static void Commit(string rootDirectory, string repositoryDirectory,
+            string directoryInRepository, string url, string message, Action<bool, string> onProgress)
+        {
+            SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
+
+            string path = $"{rootDirectory}/{repositoryDirectory}";
+            RunCommand(path, $"git add --all", onProgress, out var addOutput);
+            if(!AssertCommandOutput("Running: ' ", addOutput, onProgress)) { return; }
+            
+            RunCommand(path, $"git commit -m \"{message}\"", onProgress, out var commitOutput);
+            if(!AssertCommandOutput("Running: ' ", commitOutput, onProgress)) { return; }
+
+            SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
+        }
+        
 
         public static void PushRepository(string rootDirectory, string repositoryDirectory,
             string directoryInRepository, string url, string branch, Action<bool, string> onProgress)

@@ -14,6 +14,8 @@ namespace GitRepositoryManager
 	/// </summary>
 	public class Repository
 	{
+		public const string DEFAULT_MESSAGE = "Empty commit message";
+		
 		private static List<Repository> _repos = new List<Repository>();
 		public static Repository Get(string url, string branch, string rootFolder, string repositoryFolder, string directoryInRepository)
 		{
@@ -66,12 +68,19 @@ namespace GitRepositoryManager
 			public string RepositoryFolder; //The folder that the repository will be initialized in. Relative from RootFolder.
 			public string DirectoryInRepository; //The folder in the repository that will be checked out sparsely. Relative from RootFolder.
 		}
+		
+		public class PushState : RepoState
+		{
+			public string Message; //Commit message
+		}
 
 		private readonly RepoState _state;
 
 		//shared between thread pool process and main thread
 		private volatile bool _inProgress;
 		private volatile bool _refreshPending = false;
+
+		public string Branch => _state.Branch;
 
 		public bool RefreshPending
 		{
@@ -131,9 +140,17 @@ namespace GitRepositoryManager
 			}
 		}
 
-		public void PushChanges()
+		public void PushChanges(string branch = null, string message = null)
 		{
-			ThreadPool.QueueUserWorkItem(PushTask, _state);
+			ThreadPool.QueueUserWorkItem(PushTask, new PushState()
+			{
+				Url = _state.Url,
+				Branch = branch??_state.Branch,
+				RootFolder = _state.RootFolder,
+				RepositoryFolder =  _state.RepositoryFolder,
+				DirectoryInRepository = _state.DirectoryInRepository,
+				Message = message??DEFAULT_MESSAGE
+			});
 		}
 
 		public bool TryRemoveCopy()
@@ -238,8 +255,7 @@ namespace GitRepositoryManager
 		/// <param name="stateInfo"></param>
 		private void PushTask(object stateInfo)
 		{
-			//Do as much as possible outside of unity so we dont get constant rebuilds. Only when everything is ready
-			RepoState state = (RepoState)stateInfo;
+			PushState state = (PushState)stateInfo;
 
 			if(state == null)
 			{
@@ -249,6 +265,7 @@ namespace GitRepositoryManager
 
 			if (GitProcessHelper.RepositoryIsValid(state.RepositoryFolder, OnProgress))
 			{
+				GitProcessHelper.Commit(state.RootFolder, state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Message, OnProgress);
 				GitProcessHelper.PushRepository(state.RootFolder,state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
 			}
 
