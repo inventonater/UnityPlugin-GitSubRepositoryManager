@@ -5,6 +5,7 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace GitRepositoryManager
 {
@@ -57,6 +58,32 @@ namespace GitRepositoryManager
 			get
 			{
 				return _repos.Count;
+			}
+		}
+
+		public void UpdateStatus()
+		{
+			ThreadPool.QueueUserWorkItem(StatusTask, _state);
+		}
+
+		private string _lastStatus = string.Empty;
+
+		public string Status
+		{
+			get
+			{
+				lock(_lastStatus)
+				{
+					//TODO: make the status pretty: https://git-scm.com/docs/git-status
+					string formatttedStatus = String.Empty;
+					string[] lines = _lastStatus.Split('\n');
+					for(int i = 1; i < lines.Length; i++)
+					{
+						formatttedStatus += $"{lines[i]}\n";
+					}
+					return $" {formatttedStatus.Trim('\r', '\n', ' ')}";
+					
+				}
 			}
 		}
 
@@ -119,7 +146,6 @@ namespace GitRepositoryManager
 			{
 				Url = url,
 				Branch = branch,
-
 				RootFolder = rootFolder,
 				RepositoryFolder = repositoryFolder,
 				DirectoryInRepository = directoryInRepository
@@ -204,6 +230,43 @@ namespace GitRepositoryManager
 			}
 
 			return currentProgress;
+		}
+		
+		
+		/// <summary>
+		/// Runs in a thread pool. 
+		/// </summary>
+		/// <param name="stateInfo"></param>
+		private void StatusTask(object stateInfo)
+		{
+			//Do as much as possible outside of unity so we dont get constant rebuilds. Only when everything is ready
+			RepoState state = (RepoState)stateInfo;
+
+			if(state == null)
+			{
+				_progressQueue.Enqueue(new Progress(0, "Repository state info is null",true));
+				return;
+			}
+
+			if (GitProcessHelper.RepositoryIsValid(state.RepositoryFolder, OnProgress))
+			{
+				lock (_lastStatus)
+				{
+					_lastStatus = GitProcessHelper.Status(state.RootFolder, state.RepositoryFolder, OnProgress);
+				}
+			}
+			else
+			{
+				lock (_lastStatus)
+				{
+					_lastStatus = "Repository not found.";
+				}
+			}
+
+			void OnProgress(bool success, string message)
+			{
+				_progressQueue.Enqueue(new Progress(0, message, !success));
+			}
 		}
 
 

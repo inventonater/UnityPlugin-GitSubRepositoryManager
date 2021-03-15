@@ -1,18 +1,10 @@
 {
     "Dependencies": [
         {
-            "Name": "Boilerplate",
-            "SubFolder": "Boostrapper",
-            "Url": "https://github.com/rossborchers/UnityBoilerplate",
-            "Branch": "master",
-            "IgnoreInParent": false
-        },
-        {
             "Name": "BVH",
             "SubFolder": "",
             "Url": "https://github.com/rossborchers/UnityBoundingVolumeHeirachy",
-            "Branch": "master",
-            "IgnoreInParent": false
+            "Branch": "master"
         }
     ]
 }

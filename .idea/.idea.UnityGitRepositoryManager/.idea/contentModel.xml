@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ContentModelStore">
     <e p="C:\Projects\RenderHeads\UnityGitRepositoryManager" t="IncludeRecursive">
-      <e p="Assembly-CSharp-Editor.csproj" t="IncludeRecursive" />
-      <e p="Assembly-CSharp.csproj" t="IncludeRecursive" />
       <e p="Assets" t="Include">
         <e p="Package" t="Include">
           <e p="Core" t="Include">
@@ -22,22 +20,13 @@
           <e p="Sparse checkout example.txt" t="Include" />
         </e>
         <e p="Repositories" t="Include">
-          <e p="Boilerplate" t="Include">
-            <e p="Boostrapper" t="Include">
-              <e p="Boostrapper.cs" t="Include" />
-              <e p="Editor" t="Include">
-                <e p="LoadBootstrapper.cs" t="Include" />
-              </e>
-              <e p="LevelData.cs" t="Include" />
-            </e>
-          </e>
           <e p="BVH" t="Include">
-            <e p="Adapters" t="Include">
+            <e p="Adapterss" t="Include">
               <e p="BVHGameObjectAdapter.cs" t="Include" />
               <e p="BVHSphereAdapter.cs" t="Include" />
               <e p="IBVHNodeAdapter.cs" t="Include" />
             </e>
-            <e p="BVHa.cs" t="Include" />
+            <e p="BVH.cs" t="Include" />
             <e p="BVHNode.cs" t="Include" />
             <e p="DataStructures.BVH.asmdef" t="Include" />
             <e p="Tests" t="Include">

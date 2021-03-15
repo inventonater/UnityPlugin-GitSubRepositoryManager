@@ -11,6 +11,8 @@ namespace GitRepositoryManager
     //This blocks on the caller thread. Should be run through a thread pool.
     public static class GitProcessHelper
     {
+        private static readonly object enableRepoLock = new object();
+        
         public static bool CheckRemoteExists(string url, string branch, Action<bool, string> onProgress)
         {
             bool success = false;
@@ -95,20 +97,24 @@ namespace GitRepositoryManager
                 onProgress(false, e.Message);
             }
         }
-
+        
         private static void SetEnableRepository(string rootDirectory, string repositoryDirectory, bool enable, Action<bool, string> onProgress)
         {
-            string gitPath = $"{rootDirectory}/{repositoryDirectory}/{(enable?".gitsubrepository":".git")}";
-            string destinationGitPath = $"{rootDirectory}/{repositoryDirectory}/{(enable?".git":".gitsubrepository")}";
-            if (Directory.Exists(gitPath))
+            lock (enableRepoLock)
             {
-                onProgress?.Invoke(true, enable?$"Enabling git for {repositoryDirectory}":$"Disabling git for {repositoryDirectory}");
-                Directory.Move(gitPath, destinationGitPath);
+                string gitPath = $"{rootDirectory}/{repositoryDirectory}/{(enable?".gitsubrepository":".git")}";
+                string destinationGitPath = $"{rootDirectory}/{repositoryDirectory}/{(enable?".git":".gitsubrepository")}";
+                if (Directory.Exists(gitPath))
+                {
+                    onProgress?.Invoke(true, enable?$"Enabling git for {repositoryDirectory}":$"Disabling git for {repositoryDirectory}");
+                    Directory.Move(gitPath, destinationGitPath);
+                }
+                else
+                {
+                    onProgress?.Invoke(true, enable?$"{repositoryDirectory} already enabled.":$"{repositoryDirectory} already disabled.");
+                }
             }
-            else
-            {
-                onProgress?.Invoke(true, enable?$"{repositoryDirectory} already enabled.":$"{repositoryDirectory} already disabled.");
-            }
+            
         }
 
         public static void UpdateRepository(string rootDirectory, string repositoryDirectory, string directoryInRepository, string url, string branch, Action<bool, string> onProgress)
@@ -142,7 +148,18 @@ namespace GitRepositoryManager
 
             SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
         }
-        
+
+        public static string Status(string rootDirectory, string repositoryDirectory, Action<bool, string> onProgress)
+        {
+            SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
+            string path = $"{rootDirectory}/{repositoryDirectory}";
+            
+            RunCommand(path, $"git status --porcelain", onProgress, out string output);
+            
+            SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
+            
+            return output;
+        }
 
         public static void PushRepository(string rootDirectory, string repositoryDirectory,
             string directoryInRepository, string url, string branch, Action<bool, string> onProgress)

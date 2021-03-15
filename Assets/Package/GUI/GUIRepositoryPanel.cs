@@ -66,6 +66,9 @@ namespace GitRepositoryManager
 			{
 				return _hasLocalChanges;
 			}
+			
+			//Use this check as an opportunity to refresh the git status
+			RefreshStatus();
 
 			string path = RelativeRepositoryPath();
 			string lastSnapshot = EditorPrefs.GetString(path + "_snapshot");
@@ -76,7 +79,6 @@ namespace GitRepositoryManager
 
 		public void TakeBaselineSnapshot()
 		{
-			//TODO: think about refactoring this to using git
 			string path = RelativeRepositoryPath();
 			string newBaseline = SnapshotFolder(path);
 			EditorPrefs.SetString(path + "_snapshot", newBaseline);
@@ -84,7 +86,8 @@ namespace GitRepositoryManager
 
 		// https://stackoverflow.com/questions/3625658/creating-hash-for-folder
 		private string SnapshotFolder(string path)
-		{
+		{	
+			//TODO: think about refactoring this to using git
 			//UnityEngine.Debug.Log("Performing snapshot for: " + path);
 			if(!Directory.Exists(path))
 			{
@@ -113,7 +116,24 @@ namespace GitRepositoryManager
 				md5.TransformBlock(pathBytes, 0, pathBytes.Length, pathBytes, 0);
 
 				// hash contents
-				byte[] contentBytes = File.ReadAllBytes(file);
+				
+				//Check for the status of the directory. If its busy being operated on and has been converted to a git repository, or an error has occured
+				//and the path was never changed back correctly we may need to check the path as a git directory.
+				if (!Directory.Exists(Path.GetDirectoryName(file)))
+				{
+					if (file.Contains(".gitsubrepository"))
+					{
+						file = file.Replace(".gitsubrepository", ".git");
+					}
+					else
+					{
+						file = file.Replace(".git", ".gitsubrepository");
+					}
+				}
+				
+				byte[] contentBytes;
+				contentBytes = File.ReadAllBytes(file);
+		
 				if (i == files.Count - 1)
 					md5.TransformFinalBlock(contentBytes, 0, contentBytes.Length);
 				else
@@ -230,7 +250,7 @@ namespace GitRepositoryManager
 			if(_hasLocalChanges)
 			{
 				GUI.color = Color.yellow;
-				GUI.Label(localChangesRect, new GUIContent("*", "Local changes detected. Commit them before proceeding."), EditorStyles.miniBoldLabel);
+				GUI.Label(localChangesRect, new GUIContent("*", $"Local changes detected!\n\n{_repo.Status}"), EditorStyles.miniBoldLabel);
 				GUI.color = Color.white;
 			}
 
@@ -293,8 +313,11 @@ namespace GitRepositoryManager
 			GUIStyle labelStyle = new GUIStyle(EditorStyles.label);
 			labelStyle.richText = true;
 
-			GUI.Label(labelRect, DependencyInfo.Name + "  <b><size=9>" + DependencyInfo.Branch + "</size></b>" +
-			                     (_repo.InProgress ? $" <i><size=9>{lastProgress.Message}{GUIUtility.GetLoadingDots()}</size></i>" : ""), labelStyle);
+			string repoText = DependencyInfo.Name + "  <b><size=9>" + DependencyInfo.Branch + "</size></b>" +
+			                  (_repo.InProgress
+				                  ? $" <i><size=9>{lastProgress.Message}{GUIUtility.GetLoadingDots()}</size></i>"
+				                  : "");
+			GUI.Label(labelRect, new GUIContent(repoText, DependencyInfo.Url), labelStyle);
 
 			if (_repo.RefreshPending)
 			{
@@ -328,7 +351,6 @@ namespace GitRepositoryManager
 
 			if (GUI.Button(rect, new GUIContent(_pullIcon, "Pull or clone into project."), iconButtonStyle))
 			{
-				//TODO: why is this button never being called?!?!
 				if (HasLocalChanges())
 				{
 					if (EditorUtility.DisplayDialog("Local Changes Detected", DependencyInfo.Name + " has local changes. Updating will permanently delete them. Continue?", "Yes", "No"))
@@ -351,6 +373,11 @@ namespace GitRepositoryManager
 		public void UpdateRepository()
 		{
 			_repo.TryUpdate();
+		}
+
+		public void RefreshStatus()
+		{
+			_repo.UpdateStatus();
 		}
 
 		public void OpenPushWindow()

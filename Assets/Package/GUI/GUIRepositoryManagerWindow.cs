@@ -339,8 +339,7 @@ namespace GitRepositoryManager
 
 
 			GUIUtility.DrawLine();
-
-
+			
 			//This is a dumb but kidna fancy way of adding new dependencies.
 			if (_tester.Testing)
 			{
