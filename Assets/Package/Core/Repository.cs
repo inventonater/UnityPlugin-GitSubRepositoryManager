@@ -61,31 +61,75 @@ namespace GitRepositoryManager
 			}
 		}
 
-		public void UpdateStatus()
+		//Update status on main thread. Useful when status result is needed immediately. 
+		public void BlockAndUpdateStatus()
 		{
-			ThreadPool.QueueUserWorkItem(StatusTask, _state);
+			//ThreadPool.QueueUserWorkItem(StatusTask, _state);
+			StatusTask(_state);
 		}
 
 		private string _lastStatus = string.Empty;
-
-		public string Status
+		private string _lastPrintableStatus = string.Empty;
+		public string PrintableStatus => _lastPrintableStatus;
+		
+		private List<KeyValuePair<string, string>> _statusPrettifyLookup = new List<KeyValuePair<string, string>>()
 		{
-			get
+			new KeyValuePair<string, string>("D ", "Deleted"),
+			new KeyValuePair<string, string>("?? ", "Untracked"),
+			new KeyValuePair<string, string>("M ", "Modified")
+			
+		};
+
+		//This is called from multiple threads!
+		private string CreatePrintableStatus()
+		{
+			lock(_lastStatus)
 			{
-				lock(_lastStatus)
+				if (_lastStatus == "Repository not found.")
 				{
-					//TODO: make the status pretty: https://git-scm.com/docs/git-status
-					string formatttedStatus = String.Empty;
-					string[] lines = _lastStatus.Split('\n');
-					for(int i = 1; i < lines.Length; i++)
-					{
-						formatttedStatus += $"{lines[i]}\n";
-					}
-					return $" {formatttedStatus.Trim('\r', '\n', ' ')}";
-					
+					return _lastStatus;
 				}
+				
+				//TODO: make the status pretty: https://git-scm.com/docs/git-status
+				string pathBlurbRemoved = Regex.Replace(_lastStatus, "^Running: 'git status --porcelain' in '.*' ", "");
+				string[] lines = pathBlurbRemoved.Split('\n');
+				
+				int lineCount = 0;
+				string formatttedStatus = String.Empty;
+				for(int i = 0; i < lines.Length; i++)
+				{
+					if (string.IsNullOrEmpty(lines[i]))
+					{
+						continue;
+					}
+
+					//Prettify common outputs
+					string line = lines[i].Trim();
+					foreach (var kvp in _statusPrettifyLookup)
+					{
+						if (line.StartsWith(kvp.Key))
+						{
+							line = $"{kvp.Value} {line.Substring(kvp.Key.Length)}";
+							break;
+						}
+					}
+					
+					formatttedStatus += $"{line.Trim()}\n";
+					lineCount++;
+				}
+				
+				HasUncommittedChanges = lineCount > 1;
+					
+				return $"{formatttedStatus.Trim('\r', '\n', ' ')}";
 			}
 		}
+
+		public volatile bool HasUncommittedChanges;
+
+		//TODO: add this functionality!
+		public volatile bool AheadOfOrigin;
+		//TODO: add this functionality!
+		public volatile bool BehindOrigin;
 
 		public class RepoState
 		{
@@ -178,6 +222,25 @@ namespace GitRepositoryManager
 				Message = message??DEFAULT_MESSAGE
 			});
 		}
+		
+		public bool ClearLocalChanges()
+		{
+
+			/*if (!Directory.Exists(AbsolutePath))
+			{
+				return false;
+			}
+
+			// remove read only attribute on all files so we can delete them (this is primarily for the .git folders files, as git sets readonly)
+			var files = Directory.GetFiles(AbsolutePath, "*.*", SearchOption.AllDirectories).OrderBy(p => p).ToList();
+			foreach (string filePath in files)
+			{
+				File.SetAttributes(filePath, FileAttributes.Normal);
+			}
+
+			Directory.Delete(AbsolutePath, true);*/
+			return true;
+		}
 
 		public bool TryRemoveCopy()
 		{
@@ -232,9 +295,8 @@ namespace GitRepositoryManager
 			return currentProgress;
 		}
 		
-		
 		/// <summary>
-		/// Runs in a thread pool. 
+		/// Made to run in a thread pool, but is running synchronously.
 		/// </summary>
 		/// <param name="stateInfo"></param>
 		private void StatusTask(object stateInfo)
@@ -262,13 +324,14 @@ namespace GitRepositoryManager
 					_lastStatus = "Repository not found.";
 				}
 			}
+			
+			_lastPrintableStatus = CreatePrintableStatus();
 
 			void OnProgress(bool success, string message)
 			{
 				_progressQueue.Enqueue(new Progress(0, message, !success));
 			}
 		}
-
 
 		/// <summary>
 		/// Runs in a thread pool. Should clone then checkout the appropriate branch/commit. copy subdirectory into specified repo.

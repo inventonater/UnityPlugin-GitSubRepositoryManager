@@ -28,11 +28,7 @@ namespace GitRepositoryManager
 		public event Action<GUIRepositoryPanel[]> OnRefreshRequested = delegate { };
 
 		public event Action OnRepaintRequested = delegate { };
-
-		//Note this updates the UI but its not serialized and should not be used for any buisiness logic.
-		//This is set when an update attempt occurs, or when we the assembly is reloaded.
-		private bool _hasLocalChanges;
-
+		
 		private Texture2D _editIcon;
 		private Texture2D _removeIcon;
 		private Texture2D _pushIcon;
@@ -59,90 +55,7 @@ namespace GitRepositoryManager
 		}
 
 		private string ExpandableAreaIdentifier => $"GUIRepo_ExpandableArea_{DependencyInfo.Url}_{DependencyInfo.Branch}_{DependencyInfo.SubFolder}";
-
-		public bool HasLocalChanges(bool useCached = false)
-		{
-			if (useCached)
-			{
-				return _hasLocalChanges;
-			}
-			
-			//Use this check as an opportunity to refresh the git status
-			RefreshStatus();
-
-			string path = RelativeRepositoryPath();
-			string lastSnapshot = EditorPrefs.GetString(path + "_snapshot");
-			string currentSnapshot = SnapshotFolder(path);
-			_hasLocalChanges = lastSnapshot != currentSnapshot;
-			return _hasLocalChanges;
-		}
-
-		public void TakeBaselineSnapshot()
-		{
-			string path = RelativeRepositoryPath();
-			string newBaseline = SnapshotFolder(path);
-			EditorPrefs.SetString(path + "_snapshot", newBaseline);
-		}
-
-		// https://stackoverflow.com/questions/3625658/creating-hash-for-folder
-		private string SnapshotFolder(string path)
-		{	
-			//TODO: think about refactoring this to using git
-			//UnityEngine.Debug.Log("Performing snapshot for: " + path);
-			if(!Directory.Exists(path))
-			{
-				return "";
-			}
-
-			// assuming you want to include nested folders
-			var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
-								 .OrderBy(p => p).ToList();
-
-			// Get all meta files to remove them from the file list (since meta files change regularly on import)
-			var metaFiles = Directory.GetFiles(path, "*.meta", SearchOption.AllDirectories)
-				.OrderBy(p => p).ToList();
-
-			metaFiles.ForEach((meta) => { files.Remove(meta);});
-
-			MD5 md5 = MD5.Create();
-
-			for (int i = 0; i < files.Count; i++)
-			{
-				string file = files[i];
-
-				// hash path
-				string relativePath = file.Substring(path.Length + 1);
-				byte[] pathBytes = Encoding.UTF8.GetBytes(relativePath.ToLower());
-				md5.TransformBlock(pathBytes, 0, pathBytes.Length, pathBytes, 0);
-
-				// hash contents
-				
-				//Check for the status of the directory. If its busy being operated on and has been converted to a git repository, or an error has occured
-				//and the path was never changed back correctly we may need to check the path as a git directory.
-				if (!Directory.Exists(Path.GetDirectoryName(file)))
-				{
-					if (file.Contains(".gitsubrepository"))
-					{
-						file = file.Replace(".gitsubrepository", ".git");
-					}
-					else
-					{
-						file = file.Replace(".git", ".gitsubrepository");
-					}
-				}
-				
-				byte[] contentBytes;
-				contentBytes = File.ReadAllBytes(file);
 		
-				if (i == files.Count - 1)
-					md5.TransformFinalBlock(contentBytes, 0, contentBytes.Length);
-				else
-					md5.TransformBlock(contentBytes, 0, contentBytes.Length, contentBytes, 0);
-			}
-
-			return BitConverter.ToString(md5.Hash).Replace("-", "").ToLower();
-		}
-
 		private Repository _repo
 		{
 			get
@@ -155,10 +68,7 @@ namespace GitRepositoryManager
 		public GUIRepositoryPanel(Dependency info, Texture2D editIcon, Texture2D removeIcon, Texture2D pushIcon, Texture2D pullIcon)
 		{
 			DependencyInfo = info;
-
-			//Note if the hash gets too expensive we may have to cut this (maybe could be async?)
-			_hasLocalChanges = HasLocalChanges();
-
+			
 			_editIcon = editIcon;
 			_removeIcon = removeIcon;
 			_pushIcon = pushIcon;
@@ -184,6 +94,16 @@ namespace GitRepositoryManager
 				return true;
 			}
 			return false;
+		}
+
+		public bool HasLocalChanges()
+		{
+			return _repo.HasUncommittedChanges || _repo.AheadOfOrigin;
+		}
+
+		public void UpdateStatus()
+		{
+			_repo.BlockAndUpdateStatus();
 		}
 
 		public void OnDrawGUI(int index)
@@ -247,10 +167,21 @@ namespace GitRepositoryManager
 				GUI.Box(boxRect, "");
 			}
 
-			if(_hasLocalChanges)
+			//_repo.BlockAndUpdateStatus();
+			
+			bool updateNeeded = _repo.HasUncommittedChanges || _repo.AheadOfOrigin;
+			bool remoteChanges = _repo.BehindOrigin;
+				
+			if(updateNeeded)
 			{
 				GUI.color = Color.yellow;
-				GUI.Label(localChangesRect, new GUIContent("*", $"Local changes detected!\n\n{_repo.Status}"), EditorStyles.miniBoldLabel);
+				GUI.Label(localChangesRect, new GUIContent("*", $"Local changes detected!\n\n{_repo.PrintableStatus}"), EditorStyles.miniBoldLabel);
+				GUI.color = Color.white;
+			}
+			else if (remoteChanges)
+			{
+				GUI.color = Color.green;
+				GUI.Label(localChangesRect, new GUIContent("*", $"Remote changes detected!\n\n{_repo.PrintableStatus}"), EditorStyles.miniBoldLabel);
 				GUI.color = Color.white;
 			}
 
@@ -276,7 +207,7 @@ namespace GitRepositoryManager
 
 			if (!_repo.InProgress)
 			{
-				DrawUpdateButton(pullButtonRect);
+				DrawUpdateButton(pullButtonRect, updateNeeded);
 			}
 
 			GUIStyle iconButtonStyle = new GUIStyle( EditorStyles.miniButton);
@@ -288,7 +219,7 @@ namespace GitRepositoryManager
 			if (!_repo.InProgress && GUI.Button(removeButtonRect, new GUIContent(_removeIcon, "Remove the repository from this project."), iconButtonStyle))
 			{
 				if (EditorUtility.DisplayDialog("Remove " + DependencyInfo.Name + "?", "\nThis will remove the repository from the project.\n" +
-					((_hasLocalChanges)?"\nAll local changes will be discarded.\n":"") + "\nThis can not be undone.", "Yes", "Cancel"))
+					((updateNeeded)?"\nAll local changes will be discarded.\n":"") + "\nThis can not be undone.", "Yes", "Cancel"))
 				{
 					OnRemovalRequested(DependencyInfo.Name, DependencyInfo.Url, RelativeRepositoryPath());
 				}
@@ -297,7 +228,7 @@ namespace GitRepositoryManager
 			{
 				OnEditRequested(DependencyInfo, RelativeRepositoryPath());
 			};
-			if (!_hasLocalChanges)
+			if (!updateNeeded)
 			{
 				GUI.enabled = false;
 			}
@@ -330,9 +261,12 @@ namespace GitRepositoryManager
 			{
 				if (_pushPanel == null)
 				{
-					_pushPanel = new GUIPushPanel(_repo.Branch, (branch, message) =>
+					_pushPanel = new GUIPushPanel(DependencyInfo.Url, _repo.Branch, DependencyInfo.Name, _repo,(branch, message) =>
 					{
 						_repo.PushChanges(branch, message);
+					}, () =>
+					{
+						_repo.ClearLocalChanges();
 					});
 				}
 				_pushPanel.OnDrawGUI();
@@ -344,14 +278,14 @@ namespace GitRepositoryManager
 			//TODO: and update the gitignore as expected!
 		}
 
-		private void DrawUpdateButton(Rect rect)
+		private void DrawUpdateButton(Rect rect, bool updateNeeded)
 		{
 			GUIStyle iconButtonStyle = new GUIStyle( EditorStyles.miniButton);
 			iconButtonStyle.padding = new RectOffset(3,3,3,3);
 
 			if (GUI.Button(rect, new GUIContent(_pullIcon, "Pull or clone into project."), iconButtonStyle))
 			{
-				if (HasLocalChanges())
+				if (updateNeeded)
 				{
 					if (EditorUtility.DisplayDialog("Local Changes Detected", DependencyInfo.Name + " has local changes. Updating will permanently delete them. Continue?", "Yes", "No"))
 					{
@@ -373,11 +307,6 @@ namespace GitRepositoryManager
 		public void UpdateRepository()
 		{
 			_repo.TryUpdate();
-		}
-
-		public void RefreshStatus()
-		{
-			_repo.UpdateStatus();
 		}
 
 		public void OpenPushWindow()

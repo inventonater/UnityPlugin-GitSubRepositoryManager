@@ -7,6 +7,7 @@ using UnityEditor.AnimatedValues;
 using UnityEditor.Callbacks;
 using UnityEditor.Graphs;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace GitRepositoryManager
 {
@@ -121,13 +122,20 @@ namespace GitRepositoryManager
 					panel.OnRemovalRequested += OnPanelRemovalRequested;
 					panel.OnRefreshRequested += (updatedRepos) =>
 					{
-						UpdateAssetDatabaseAndTakeSnapshots(updatedRepos);
+						UpdateAssetDatabase();
 					};
 					panel.OnEditRequested += OnPanelEditRequested;
 					panel.OnRepaintRequested += Repaint;
 					_repoPanels.Add(panel);
 				}
 			}
+
+			//update git status, used to determine if changes are present
+			foreach (GUIRepositoryPanel panel in _repoPanels)
+			{
+				panel.UpdateStatus();
+			}
+			
 			Repaint();
 		}
 
@@ -140,16 +148,10 @@ namespace GitRepositoryManager
 			_showAddDependencyMenu.target = true;
 		}
 
-		private void UpdateAssetDatabaseAndTakeSnapshots(params GUIRepositoryPanel[] updatedRepos)
+		private void UpdateAssetDatabase()
 		{
 			EditorUtility.DisplayProgressBar("Importing Repositories", "Performing re-import" + GUIUtility.GetLoadingDots(), (float)EditorApplication.timeSinceStartup % 1);
 			AssetDatabase.Refresh();
-
-			//snapshot folder and file state to compare against later!
-			foreach (GUIRepositoryPanel panel in updatedRepos)
-			{
-				panel.TakeBaselineSnapshot();
-			}
 			EditorUtility.ClearProgressBar();
 		}
 
@@ -273,7 +275,7 @@ namespace GitRepositoryManager
 			List<bool> localChangesFlags = new List<bool>(_repoPanels.Count);
 			foreach (var panel in _repoPanels)
 			{
-				localChangesFlags.Add(panel.HasLocalChanges(true));
+				localChangesFlags.Add(panel.HasLocalChanges());
 			}
 
 			if (GUI.Button(updateAllRect, new GUIContent("Update All", "Update all. You will be asked before overwriting local changes."), EditorStyles.toolbarButton))

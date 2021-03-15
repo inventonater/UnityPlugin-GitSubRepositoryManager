@@ -5,6 +5,12 @@
             "SubFolder": "",
             "Url": "https://github.com/rossborchers/UnityBoundingVolumeHeirachy",
             "Branch": "master"
+        },
+        {
+            "Name": "Test",
+            "SubFolder": "",
+            "Url": "https://github.com/RossRH/Test",
+            "Branch": "master"
         }
     ]
 }

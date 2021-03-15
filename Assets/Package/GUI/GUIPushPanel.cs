@@ -13,16 +13,24 @@ namespace GitRepositoryManager
 {
 	public class GUIPushPanel
 	{
-		private string _branch;
+		private string _targetUrl;
+		private string _targetBranch;
 		private string _commitMessage;
+		private string _localName;
 		private Action<string, string> _onPush;
+		private Action _onRemoveChanges;
 		private GUIStyle _labelStyle;
 		private GUIStyle _buttonStyle;
+		private Repository _repo;
 
-		public GUIPushPanel(string branch, Action<string, string> onPush)
+		public GUIPushPanel(string targetURL, string targetBranch, string localName, Repository repo, Action<string, string> onPush, Action onRemoveChanges)
 		{
-			_branch = branch;
+			_targetUrl = targetURL;
+			_targetBranch = targetBranch;
+			_localName = localName;
+			_repo = repo;
 			_onPush = onPush;
+			_onRemoveChanges = onRemoveChanges;
 			_commitMessage = Repository.DEFAULT_MESSAGE;
 			_labelStyle = new GUIStyle(EditorStyles.label);
 			_labelStyle.richText = true;
@@ -33,19 +41,24 @@ namespace GitRepositoryManager
 		public void OnDrawGUI()
 		{
 			EditorGUI.indentLevel+=2;
-			_branch = EditorGUILayout.TextField("Branch", _branch);
+			_targetBranch = EditorGUILayout.TextField("Remote Branch", _targetBranch);
 			_commitMessage = EditorGUILayout.TextArea(_commitMessage);
 
 			Space();
-			Rect buttonRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false));
 			
-			if (GUI.Button(buttonRect,new GUIContent("<b>Commit + Push</b>", "Commit all changes and push to the specified branch."), _buttonStyle))
+			GUILayout.BeginHorizontal();
+			Rect pushRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false));
+			pushRect.width /= 2;
+			Rect clearRect = new Rect(pushRect);
+			pushRect.x += pushRect.width;
+			
+			if (GUI.Button(pushRect,new GUIContent("<b>Commit + Push</b>", "Commit all changes and push to the specified branch."), _buttonStyle))
 			{
 				if (_commitMessage == Repository.DEFAULT_MESSAGE || _commitMessage.Trim() == string.Empty)
 				{
 					if (EditorUtility.DisplayDialog("Empty commit message",
 						"Are you sure you want to commit and push without a meaningful message?",
-						"Commit and Push Anyway", "Cancel"))
+						"Yes, Commit without a message", "Cancel"))
 					{
 						Push();
 					}
@@ -57,9 +70,25 @@ namespace GitRepositoryManager
 				
 				void Push()
 				{
-					_onPush?.Invoke(_branch, _commitMessage);
+					if (EditorUtility.DisplayDialog("Commit and Push",
+						$"Commit and push changes from {_localName}:{_repo.Branch} to {_targetUrl}:{_targetBranch}?\n\nChanges:\n{_repo.PrintableStatus}",
+						"Commit and Push", "Cancel"))
+					{
+						_onPush?.Invoke(_targetBranch, _commitMessage);
+					}
+				
 				}
 			}
+			if (GUI.Button(clearRect,new GUIContent("<b>Clear Changes</b>", "Remove all local changes."), _buttonStyle))
+			{
+				if (EditorUtility.DisplayDialog("Clear Local Changes",
+					$"This will permanently remove all local changes, staged and un-staged. Are you sure?\n\nChanges:\n{_repo.PrintableStatus}",
+					"Yes, Remove all local changes", "Cancel"))
+				{
+					_onRemoveChanges?.Invoke();
+				}
+			}
+			GUILayout.EndHorizontal();
 			EditorGUI.indentLevel-=2;
 			Space();
 			

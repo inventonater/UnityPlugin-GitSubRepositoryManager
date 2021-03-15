@@ -46,7 +46,7 @@ namespace GitRepositoryManager
             success = Directory.Exists(Path.Combine(directory,".git")) || Directory.Exists(Path.Combine(directory,".gitsubrepository"));
             if (success)
             {
-                onProgress(false, $"Repository is valid: {directory}");
+                onProgress(true, $"Repository is valid: {directory}");
                 return true;
             }
 
