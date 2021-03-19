@@ -141,10 +141,10 @@ namespace GitRepositoryManager
 
             string path = $"{rootDirectory}/{repositoryDirectory}";
             RunCommand(path, $"git add --all", onProgress, out var addOutput);
-            if(!AssertCommandOutput("Running: ' ", addOutput, onProgress)) { return; }
+            if(!AssertCommandOutput("Running: '", addOutput, onProgress)) { return; }
             
             RunCommand(path, $"git commit -m \"{message}\"", onProgress, out var commitOutput);
-            if(!AssertCommandOutput("Running: ' ", commitOutput, onProgress)) { return; }
+            if(!AssertCommandOutput("Running: '", commitOutput, onProgress)) { return; }
 
             SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
         }
@@ -169,6 +169,21 @@ namespace GitRepositoryManager
             string path = $"{rootDirectory}/{repositoryDirectory}";
             RunCommand(path, $"git push origin {branch}", onProgress, out var output);
             if(!AssertCommandOutput("Running: ' ", output, onProgress)) { return; }
+
+            SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
+        }
+        
+        public static void ClearLocalChanges(string rootDirectory, string repositoryDirectory,
+            string directoryInRepository, string url, string branch, Action<bool, string> onProgress)
+        {
+            SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
+
+            string path = $"{rootDirectory}/{repositoryDirectory}";
+            
+            RunCommand(path, $"git clean -fd", onProgress, out var cleanOutput);
+            RunCommand(path, $"git reset --hard origin/{branch}", onProgress, out var resetOutput);
+            
+            //if(!AssertCommandOutput("Running: ' ", output, onProgress)) { return; }
 
             SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
         }

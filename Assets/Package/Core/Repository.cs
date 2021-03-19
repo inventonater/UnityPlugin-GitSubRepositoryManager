@@ -225,21 +225,17 @@ namespace GitRepositoryManager
 		
 		public bool ClearLocalChanges()
 		{
-
-			/*if (!Directory.Exists(AbsolutePath))
+			if(!_inProgress)
+			{
+				//_inProgress = true;
+				//ThreadPool.QueueUserWorkItem(ClearLocalChangesTask, _state);
+				ClearLocalChangesTask(_state);
+				return true;
+			}
+			else
 			{
 				return false;
 			}
-
-			// remove read only attribute on all files so we can delete them (this is primarily for the .git folders files, as git sets readonly)
-			var files = Directory.GetFiles(AbsolutePath, "*.*", SearchOption.AllDirectories).OrderBy(p => p).ToList();
-			foreach (string filePath in files)
-			{
-				File.SetAttributes(filePath, FileAttributes.Normal);
-			}
-
-			Directory.Delete(AbsolutePath, true);*/
-			return true;
 		}
 
 		public bool TryRemoveCopy()
@@ -322,6 +318,43 @@ namespace GitRepositoryManager
 				lock (_lastStatus)
 				{
 					_lastStatus = "Repository not found.";
+				}
+			}
+			
+			_lastPrintableStatus = CreatePrintableStatus();
+
+			void OnProgress(bool success, string message)
+			{
+				_progressQueue.Enqueue(new Progress(0, message, !success));
+			}
+		}
+		
+		/// <summary>
+		/// Made to run in a thread pool, but is running synchronously.
+		/// </summary>
+		/// <param name="stateInfo"></param>
+		private void ClearLocalChangesTask(object stateInfo)
+		{
+			//Do as much as possible outside of unity so we dont get constant rebuilds. Only when everything is ready
+			RepoState state = (RepoState)stateInfo;
+
+			if(state == null)
+			{
+				_progressQueue.Enqueue(new Progress(0, "Repository state info is null",true));
+				return;
+			}
+
+			if (GitProcessHelper.RepositoryIsValid(state.RepositoryFolder, OnProgress))
+			{
+				GitProcessHelper.ClearLocalChanges(state.RootFolder,state.RepositoryFolder, 
+					state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
+				_refreshPending = true;
+			}
+			else
+			{
+				lock (_lastStatus)
+				{
+					_progressQueue.Enqueue(new Progress(0, "Repository not found",true));
 				}
 			}
 			

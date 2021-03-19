@@ -21,7 +21,7 @@
         </e>
         <e p="Repositories" t="Include">
           <e p="BVH" t="Include">
-            <e p="Adapterss" t="Include">
+            <e p="Adapters" t="Include">
               <e p="BVHGameObjectAdapter.cs" t="Include" />
               <e p="BVHSphereAdapter.cs" t="Include" />
               <e p="IBVHNodeAdapter.cs" t="Include" />
