@@ -1,16 +1,16 @@
 {
     "Dependencies": [
         {
-            "Name": "BVH",
-            "SubFolder": "",
-            "Url": "https://github.com/rossborchers/UnityBoundingVolumeHeirachy",
-            "Branch": "master"
+            "Name": "CoroutineHelper",
+            "SubFolder": "RenderHeads/CoroutineHelper/Unity/Assets/Lib",
+            "Url": "https://github.com/RenderHeads/Lib-Tooling",
+            "Branch": "test/subRepoTest"
         },
         {
-            "Name": "Test",
-            "SubFolder": "",
-            "Url": "https://github.com/RossRH/Test",
-            "Branch": "master"
+            "Name": "Easing",
+            "SubFolder": "RenderHeads/Easing/Unity/Assets/Lib",
+            "Url": "https://github.com/RenderHeads/Lib-Tooling",
+            "Branch": "test/subRepoTest"
         }
     ]
 }

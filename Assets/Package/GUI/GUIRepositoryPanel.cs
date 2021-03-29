@@ -180,7 +180,7 @@ namespace GitRepositoryManager
 			}
 			else if (remoteChanges)
 			{
-				GUI.color = Color.green;
+				GUI.color = Color.blue;
 				GUI.Label(localChangesRect, new GUIContent("*", $"Remote changes detected!\n\n{_repo.PrintableStatus}"), EditorStyles.miniBoldLabel);
 				GUI.color = Color.white;
 			}
@@ -231,13 +231,14 @@ namespace GitRepositoryManager
 			if (!updateNeeded)
 			{
 				GUI.enabled = false;
+				ClosePushWindow();
 			}
 
 			GUIStyle togglePushButtonStyle = _expandableAreaAnimBool.value?toggledIconButtonStyle:iconButtonStyle;
 			if (!_repo.InProgress && GUI.Button(pushButtonRect, new GUIContent(_pushIcon, "Push changes"), togglePushButtonStyle))
 			{
-				OpenPushWindow();
-			};
+				TogglePushWindow();
+			}
 
 			GUI.enabled = true;
 
@@ -255,14 +256,14 @@ namespace GitRepositoryManager
 				OnRefreshRequested(new[]{this});
 				_repo.RefreshPending = false;
 			}
-
-
+			
 			if (EditorGUILayout.BeginFadeGroup(_expandableAreaAnimBool.faded))
 			{
 				if (_pushPanel == null)
 				{
 					_pushPanel = new GUIPushPanel(DependencyInfo.Url, _repo.Branch, DependencyInfo.Name, _repo,(branch, message) =>
 					{
+						ClosePushWindow();
 						_repo.PushChanges(branch, message);
 					}, () =>
 					{
@@ -309,9 +310,15 @@ namespace GitRepositoryManager
 			_repo.TryUpdate();
 		}
 
-		public void OpenPushWindow()
+		public void TogglePushWindow()
 		{
 			_expandableAreaAnimBool.target = !_expandableAreaAnimBool.target;
+			EditorPrefs.SetBool(ExpandableAreaIdentifier, _expandableAreaAnimBool.target);
+		}
+		
+		public void ClosePushWindow()
+		{
+			_expandableAreaAnimBool.target = false;
 			EditorPrefs.SetBool(ExpandableAreaIdentifier, _expandableAreaAnimBool.target);
 		}
 	}

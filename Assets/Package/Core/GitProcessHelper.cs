@@ -134,6 +134,16 @@ namespace GitRepositoryManager
             SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
         }
         
+        public static void PullMerge(string rootDirectory, string repositoryDirectory, string directoryInRepository, string url, string branch, Action<bool, string> onProgress)
+        {
+            SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
+
+            string path = $"{rootDirectory}/{repositoryDirectory}";
+            RunCommand(path, $"git pull", onProgress, out var output);
+           // AssertCommandOutput("TODO", output, onProgress);
+           SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
+        }
+        
         public static void Commit(string rootDirectory, string repositoryDirectory,
             string directoryInRepository, string url, string message, Action<bool, string> onProgress)
         {

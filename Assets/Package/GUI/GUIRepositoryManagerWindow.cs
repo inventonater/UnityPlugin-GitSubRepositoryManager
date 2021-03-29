@@ -93,7 +93,7 @@ namespace GitRepositoryManager
 				for (int i = _dependencies.Dependencies.Count - 1; i >= 0; i--)
 				{
 					var dep = _dependencies.Dependencies[i];
-					if (updatedDependencies.FindAll(d => d.Url == dep.Url).Count <= 0)
+					if (updatedDependencies.FindAll(d => d.Name == dep.Name).Count <= 0)
 					{
 						_dependencies.Dependencies.RemoveAt(i);
 					}
@@ -102,7 +102,7 @@ namespace GitRepositoryManager
 				//Add new
 				foreach (var dep in updatedDependencies)
 				{
-					if (_dependencies.Dependencies.FindAll(d => d.Url == dep.Url).Count <= 0)
+					if (_dependencies.Dependencies.FindAll(d => d.Name == dep.Name).Count <= 0)
 					{
 						_dependencies.Dependencies.Add(dep);
 					}
@@ -116,7 +116,7 @@ namespace GitRepositoryManager
 			_repoPanels = new List<GUIRepositoryPanel>();
 			foreach (Dependency dependency in _dependencies.Dependencies)
 			{
-				if (_repoPanels.FindAll(p => dependency.Url == p.DependencyInfo.Url).Count == 0)
+				if (_repoPanels.FindAll(p => dependency.Name == p.DependencyInfo.Name).Count == 0)
 				{
 					GUIRepositoryPanel panel = new  GUIRepositoryPanel(dependency, _editIcon, _removeIcon, _pushIcon, _pullIcon);
 					panel.OnRemovalRequested += OnPanelRemovalRequested;
@@ -161,9 +161,9 @@ namespace GitRepositoryManager
 
 			for (int i = 0; i < _dependencies.Dependencies.Count; i++)
 			{
-				if (_dependencies.Dependencies[i].Name == name && _dependencies.Dependencies[i].Url == url)
+				if (_dependencies.Dependencies[i].Name == name)
 				{
-					GUIRepositoryPanel panel = _repoPanels.Find(p => _dependencies.Dependencies[i].Url == p.DependencyInfo.Url);
+					GUIRepositoryPanel panel = _repoPanels.Find(p => _dependencies.Dependencies[i].Name == p.DependencyInfo.Name);
 					_dependencies.Dependencies.RemoveAt(i);
 					Repository.Remove(url, repoPath);
 				}
@@ -403,12 +403,14 @@ namespace GitRepositoryManager
 						{
 							if (dep.Name.Trim().ToLower() == _potentialNewDependency.Name.Trim().ToLower())
 							{
-								addDependencyFailureMessage = "Name already exists.";
+								addDependencyFailureMessage = $"Name already exists: {dep.Name}";
 								validationSuccess = false;
 							}
-							else if (dep.Url.Trim().ToLower() == _potentialNewDependency.Url.Trim().ToLower())
+							else if (String.Equals(dep.Url.Trim(), _potentialNewDependency.Url.Trim(), StringComparison.CurrentCultureIgnoreCase) && 
+							         String.Equals(dep.SubFolder.Trim(), _potentialNewDependency.SubFolder.Trim(), StringComparison.CurrentCultureIgnoreCase) &&
+							         String.Equals(dep.Branch.Trim(), _potentialNewDependency.Branch.Trim(), StringComparison.CurrentCultureIgnoreCase))
 							{
-								addDependencyFailureMessage = "Repository already exists with the current url.\nExisting: " + dep.Name;
+								addDependencyFailureMessage = $"Repository already exists with the current url, branch and subfolder.\nExisting: {dep.Name}";
 								validationSuccess = false;
 							}
 						}
@@ -432,9 +434,7 @@ namespace GitRepositoryManager
 									//Update the newly added repo
 									foreach (GUIRepositoryPanel panel in _repoPanels)
 									{
-										if (panel.DependencyInfo.Url == _potentialNewDependency.Url &&
-											panel.DependencyInfo.Branch == _potentialNewDependency.Branch &&
-											panel.DependencyInfo.Name == _potentialNewDependency.Name)
+										if (panel.DependencyInfo.Name == _potentialNewDependency.Name)
 										{
 											//force this as we want to copy
 											panel.UpdateRepository();

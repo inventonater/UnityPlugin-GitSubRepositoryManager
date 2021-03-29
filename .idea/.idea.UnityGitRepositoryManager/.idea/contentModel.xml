@@ -20,24 +20,42 @@
           <e p="Sparse checkout example.txt" t="Include" />
         </e>
         <e p="Repositories" t="Include">
-          <e p="BVH" t="Include">
-            <e p="Adapters" t="Include">
-              <e p="BVHGameObjectAdapter.cs" t="Include" />
-              <e p="BVHSphereAdapter.cs" t="Include" />
-              <e p="IBVHNodeAdapter.cs" t="Include" />
+          <e p="CoroutineHelper" t="Include">
+            <e p="RenderHeads" t="Include">
+              <e p="CoroutineHelper" t="Include">
+                <e p="Unity" t="Include">
+                  <e p="Assets" t="Include">
+                    <e p="Lib" t="Include">
+                      <e p="Runtime" t="Include">
+                        <e p="CoroutineHelper.asmdef" t="Include" />
+                        <e p="CoroutineHelper.cs" t="Include" />
+                      </e>
+                    </e>
+                  </e>
+                </e>
+              </e>
             </e>
-            <e p="BVH.cs" t="Include" />
-            <e p="BVHNode.cs" t="Include" />
-            <e p="DataStructures.BVH.asmdef" t="Include" />
-            <e p="Tests" t="Include">
-              <e p="BVHTests.cs" t="Include" />
-              <e p="DataStructures.BVH.Tests.asmdef" t="Include" />
+          </e>
+          <e p="Easing" t="Include">
+            <e p="RenderHeads" t="Include">
+              <e p="Easing" t="Include">
+                <e p="Unity" t="Include">
+                  <e p="Assets" t="Include">
+                    <e p="Lib" t="Include">
+                      <e p="Runtime" t="Include">
+                        <e p="Easing.asmdef" t="Include" />
+                        <e p="Easing.cs" t="Include" />
+                      </e>
+                    </e>
+                  </e>
+                </e>
+              </e>
             </e>
           </e>
         </e>
       </e>
-      <e p="DataStructures.BVH.csproj" t="IncludeRecursive" />
-      <e p="DataStructures.BVH.Tests.csproj" t="IncludeRecursive" />
+      <e p="CoroutineHelper.csproj" t="IncludeRecursive" />
+      <e p="Easing.csproj" t="IncludeRecursive" />
       <e p="GitRepoManager.Editor.csproj" t="IncludeRecursive" />
       <e p="obj" t="ExcludeRecursive" />
       <e p="packages" t="ExcludeRecursive" />

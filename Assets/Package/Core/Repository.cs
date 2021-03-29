@@ -22,6 +22,7 @@ namespace GitRepositoryManager
 		{
 			foreach(Repository repo in _repos)
 			{
+				//TODO: questionable comparison. Could this not just be name?
 				if(repo._state.Url == url &&
 					repo._state.RootFolder ==  rootFolder &&
 					repo._state.RepositoryFolder == repositoryFolder)
@@ -45,6 +46,7 @@ namespace GitRepositoryManager
 			for(int i = _repos.Count-1; i >=0 ; i--)
 			{
 				Repository repo = _repos[i];
+				//TODO: should we not remove just based on name?
 				if (repo._state.Url == url &&
 					repo._state.RepositoryFolder == rootFolder)
 				{
@@ -210,17 +212,26 @@ namespace GitRepositoryManager
 			}
 		}
 
-		public void PushChanges(string branch = null, string message = null)
+		public bool PushChanges(string branch = null, string message = null)
 		{
-			ThreadPool.QueueUserWorkItem(PushTask, new PushState()
+			if (!_inProgress)
 			{
-				Url = _state.Url,
-				Branch = branch??_state.Branch,
-				RootFolder = _state.RootFolder,
-				RepositoryFolder =  _state.RepositoryFolder,
-				DirectoryInRepository = _state.DirectoryInRepository,
-				Message = message??DEFAULT_MESSAGE
-			});
+				_inProgress = true;
+				ThreadPool.QueueUserWorkItem(PushTask, new PushState()
+				{
+					Url = _state.Url,
+					Branch = branch ?? _state.Branch,
+					RootFolder = _state.RootFolder,
+					RepositoryFolder = _state.RepositoryFolder,
+					DirectoryInRepository = _state.DirectoryInRepository,
+					Message = message ?? DEFAULT_MESSAGE
+				});
+				return true;
+			}
+			else
+			{
+				return false;
+			}
 		}
 		
 		public bool ClearLocalChanges()
@@ -424,6 +435,7 @@ namespace GitRepositoryManager
 
 			if (GitProcessHelper.RepositoryIsValid(state.RepositoryFolder, OnProgress))
 			{
+				GitProcessHelper.PullMerge(state.RootFolder,state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
 				GitProcessHelper.Commit(state.RootFolder, state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Message, OnProgress);
 				GitProcessHelper.PushRepository(state.RootFolder,state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
 			}
