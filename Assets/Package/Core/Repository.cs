@@ -383,39 +383,46 @@ namespace GitRepositoryManager
 		/// <param name="stateInfo"></param>
 		private void UpdateTask(object stateInfo)
 		{
-			//Do as much as possible outside of unity so we dont get constant rebuilds. Only when everything is ready
-			RepoState state = (RepoState)stateInfo;
+			try
+			{
+				//Do as much as possible outside of unity so we dont get constant rebuilds. Only when everything is ready
+				RepoState state = (RepoState)stateInfo;
 
-			if(state == null)
-			{
-				_progressQueue.Enqueue(new Progress(0, "Repository state info is null",true));
-				return;
-			}
-
-			if (GitProcessHelper.RepositoryIsValid(state.RepositoryFolder, OnProgress))
-			{
-				GitProcessHelper.UpdateRepository(state.RootFolder,state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
-			}
-			else
-			{
-				GitProcessHelper.AddRepository(state.RootFolder, state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
-			}
-
-			//Once completed
-			if (_progressQueue.Count > 0)
-			{
-				//Get the latest progress
-				if (!_progressQueue.ToArray()[_progressQueue.Count-1].Error)
+				if(state == null)
 				{
-					_refreshPending = true;
+					_progressQueue.Enqueue(new Progress(0, "Repository state info is null",true));
+					return;
+				}
+
+				if (GitProcessHelper.RepositoryIsValid(state.RepositoryFolder, OnProgress))
+				{
+					GitProcessHelper.UpdateRepository(state.RootFolder,state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
+				}
+				else
+				{
+					GitProcessHelper.AddRepository(state.RootFolder, state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
+				}
+
+				//Once completed
+				if (_progressQueue.Count > 0)
+				{
+					//Get the latest progress
+					if (!_progressQueue.ToArray()[_progressQueue.Count-1].Error)
+					{
+						_refreshPending = true;
+					}
+				}
+
+				_inProgress = false;
+
+				void OnProgress(bool success, string message)
+				{
+					_progressQueue.Enqueue(new Progress(0, message, !success));
 				}
 			}
-
-			_inProgress = false;
-
-			void OnProgress(bool success, string message)
+			catch (Exception e)
 			{
-				_progressQueue.Enqueue(new Progress(0, message, !success));
+				Debug.LogError($"[Repository.UpdateTask] {e.Message}");
 			}
 		}
 
@@ -425,36 +432,48 @@ namespace GitRepositoryManager
 		/// <param name="stateInfo"></param>
 		private void PushTask(object stateInfo)
 		{
-			PushState state = (PushState)stateInfo;
-
-			if(state == null)
+			try
 			{
-				_progressQueue.Enqueue(new Progress(0, "Repository state info is null",true));
-				return;
-			}
+				PushState state = (PushState) stateInfo;
 
-			if (GitProcessHelper.RepositoryIsValid(state.RepositoryFolder, OnProgress))
-			{
-				GitProcessHelper.PullMerge(state.RootFolder,state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
-				GitProcessHelper.Commit(state.RootFolder, state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Message, OnProgress);
-				GitProcessHelper.PushRepository(state.RootFolder,state.RepositoryFolder, state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
-			}
-
-			//Once completed
-			if (_progressQueue.Count > 0)
-			{
-				//Get the latest progress
-				if (!_progressQueue.ToArray()[_progressQueue.Count-1].Error)
+				if (state == null)
 				{
-					_refreshPending = true;
+					_progressQueue.Enqueue(new Progress(0, "Repository state info is null", true));
+					return;
+				}
+
+				if (GitProcessHelper.RepositoryIsValid(state.RepositoryFolder, OnProgress))
+				{
+					GitProcessHelper.CheckoutBranch(state.RootFolder, state.RepositoryFolder, state.DirectoryInRepository,
+						state.Url, state.Branch, OnProgress);
+					GitProcessHelper.PullMerge(state.RootFolder, state.RepositoryFolder, state.DirectoryInRepository,
+						state.Url, state.Branch, OnProgress);
+					GitProcessHelper.Commit(state.RootFolder, state.RepositoryFolder, state.DirectoryInRepository,
+						state.Url, state.Message, OnProgress);
+					GitProcessHelper.PushRepository(state.RootFolder, state.RepositoryFolder,
+						state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
+				}
+
+				//Once completed
+				if (_progressQueue.Count > 0)
+				{
+					//Get the latest progress
+					if (!_progressQueue.ToArray()[_progressQueue.Count - 1].Error)
+					{
+						_refreshPending = true;
+					}
+				}
+
+				_inProgress = false;
+
+				void OnProgress(bool success, string message)
+				{
+					_progressQueue.Enqueue(new Progress(0, message, !success));
 				}
 			}
-
-			_inProgress = false;
-
-			void OnProgress(bool success, string message)
+			catch (Exception e)
 			{
-				_progressQueue.Enqueue(new Progress(0, message, !success));
+				Debug.LogError($"[Repository.PushTask] {e.Message}");
 			}
 		}
 

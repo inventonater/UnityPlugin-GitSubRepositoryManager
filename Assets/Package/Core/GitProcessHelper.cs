@@ -68,20 +68,12 @@ namespace GitRepositoryManager
         {
             string subDirectoryPathRelativeToRepository = directoryInRepository.Substring(repositoryDirectory.Length).Trim('/','\\');
             bool isSparse = !string.IsNullOrEmpty(subDirectoryPathRelativeToRepository);
-
             RunCommand(rootDirectory, $"git clone {url} --filter=blob:none" + (isSparse?" --sparse ":" ") + $"--single-branch --branch {branch} --depth 1 {repositoryDirectory}", onProgress, out var output);
-            if (!AssertCommandOutput(", done.", output, onProgress)) { return; }
+            //   if (!AssertCommandOutput(", done.", output, onProgress)) { return; } //Causing issues sometimes where the clone succeeds but there is no done output! just "..."
             if (!isSparse)  { return; }
             RunCommand($"{rootDirectory}/{repositoryDirectory}", $"git sparse-checkout set \"{subDirectoryPathRelativeToRepository}\"", onProgress, out output);
             AssertCommandOutput("Running: 'git sparse-checkout set", output, onProgress);
-
             SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
-
-            //Submodule stuff (do we want this? Use case would be cloning a repo without repositories embedded. (added to gitignore). Could also add a filter to do this maybe? Not keen on muddying the master repo. subtrees? subrepo?)
-            //----
-            //RunCommand(rootDirectory, $"git submodule add -b {branch} --depth 1 -f {url} {subModuleDirectory}", out output);
-            //This allows anyone pulling normally to maintain a submodule depth of 1, even after cloning the repo. See https://stackoverflow.com/questions/30129920/git-submodule-without-extra-weight/38895397#38895397
-            //RunCommand(rootDirectory, $"git config -f .gitmodules submodule.{subModuleDirectory}.shallow true", out output);
         }
 
         public static void RemoveRepository(string rootDirectory, string repositoryDirectory, Action<bool, string> onProgress)
@@ -115,6 +107,16 @@ namespace GitRepositoryManager
                 }
             }
             
+        }
+
+        public static void CheckoutBranch(string rootDirectory, string repositoryDirectory,
+            string directoryInRepository, string url, string branch, Action<bool, string> onProgress)
+        {
+            SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
+            string path = $"{rootDirectory}/{repositoryDirectory}";
+            RunCommand(path, $"git checkout -B {branch}", onProgress, out var output);
+            if(!AssertCommandOutput("Running: 'git checkout -B ", output, onProgress)) { return; }
+            SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
         }
 
         public static void UpdateRepository(string rootDirectory, string repositoryDirectory, string directoryInRepository, string url, string branch, Action<bool, string> onProgress)
