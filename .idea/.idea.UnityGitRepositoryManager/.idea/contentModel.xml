@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="C:\Projects\RenderHeads\UnityGitRepositoryManager" t="IncludeRecursive">
+      <e p="Assets" t="Include">
+        <e p="Package" t="Include">
+          <e p="Core" t="Include">
+            <e p="Dependency.cs" t="Include" />
+            <e p="GitProcessHelper.cs" t="Include" />
+            <e p="Repository.cs" t="Include" />
+            <e p="RepositoryTester.cs" t="Include" />
+          </e>
+          <e p="GitSubmoduleManager.Editor.asmdef" t="Include" />
+          <e p="GUI" t="Include">
+            <e p="GUIPushPanel.cs" t="Include" />
+            <e p="GUIRepositoryManagerWindow.cs" t="Include" />
+            <e p="GUIRepositoryPanel.cs" t="Include" />
+            <e p="GUIUtility.cs" t="Include" />
+          </e>
+          <e p="Sparse checkout example.txt" t="Include" />
+        </e>
+        <e p="Repositories" t="Include">
+          <e p="CoroutineHelper" t="Include">
+            <e p="RenderHeads" t="Include">
+              <e p="CoroutineHelper" t="Include">
+                <e p="Unity" t="Include">
+                  <e p="Assets" t="Include">
+                    <e p="Lib" t="Include">
+                      <e p="Runtime" t="Include">
+                        <e p="CoroutineHelper.asmdef" t="Include" />
+                        <e p="CoroutineHelper.cs" t="Include" />
+                      </e>
+                    </e>
+                  </e>
+                </e>
+              </e>
+            </e>
+          </e>
+          <e p="Easing" t="Include">
+            <e p="RenderHeads" t="Include">
+              <e p="Easing" t="Include">
+                <e p="Unity" t="Include">
+                  <e p="Assets" t="Include">
+                    <e p="Lib" t="Include">
+                      <e p="Runtime" t="Include">
+                        <e p="Easing.asmdef" t="Include" />
+                        <e p="Easing.cs" t="Include" />
+                      </e>
+                    </e>
+                  </e>
+                </e>
+              </e>
+            </e>
+          </e>
+        </e>
+      </e>
+      <e p="CoroutineHelper.csproj" t="IncludeRecursive" />
+      <e p="Easing.csproj" t="IncludeRecursive" />
+      <e p="GitRepoManager.Editor.csproj" t="IncludeRecursive" />
+      <e p="obj" t="ExcludeRecursive" />
+      <e p="packages" t="ExcludeRecursive" />
+      <e p="Temp\bin" t="ExcludeRecursive" />
+      <e p="UnityGitRepositoryManager.sln" t="IncludeFlat" />
+    </e>
+    <e p="C:\Users\ross\AppData\local\JetBrains\Rider2020.2\extResources" t="IncludeRecursive" />
+    <e p="C:\Users\ross\AppData\local\JetBrains\Rider2020.2\resharper-host\local\Transient\Rider\v202\SolutionCaches\_UnityGitRepositoryManager.-581232760.00" t="ExcludeRecursive" />
+  </component>
+</project>
