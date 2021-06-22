@@ -9,7 +9,7 @@ This is a tool for working on many repositories at once and pushing changes back
 
 - Add and update repositories
 - Store only needed development files
-- Allow for seperate checkout of multiple folders from the same repository.
+- Allow for separate checkout of multiple folders from the same repository.
 - Make modifications to repositories and push changes back.
 
 # Installation
@@ -53,7 +53,7 @@ I've heard people argue that when you need a subfolder what you need to do is sp
 
 ##### Git sparse checkout
 This is where sparse checkout comes in. The approach we take is to sparse checkout only the folders and files you need, directly inside your active unity project (and possibly inside another git repository). This satisfies a number of requirements:
-- No bloated history or uneccesary files.
+- No bloated history or unnecessary files.
 - No copying or symlinks
 - Directly make modifications and push them back to the main repository (A little like SVN)
 
@@ -73,21 +73,21 @@ _Packages should still be used for third party projects or projects no longer in
 - Only tested on [Windows](https://www.microsoft.com/en-us/software-download/windows10) (should be quite easy to add mac and Linux support if anyone is interested)
 - Tested with [Unity 2019.2](https://unity.com/)
 - c# [.NET standard 2.0](https://docs.microsoft.com/en-us/dotnet/standard/net-standard)
-- Uses c# tasks to run git console commands in a seperate thread. Supports 2FA.
+- Uses c# tasks to run git console commands in a separate thread. Supports 2FA.
 
 
 # Dependency Schema
-Each dependency that you add is encoded into a json file (Dependecies.json) which is stored in the root of the repositories folder. Each entry looks as follows:
+Each dependency that you add is encoded into a json file (Dependencies.json) which is stored in the root of the repositories folder. Each entry looks as follows:
 
 ```
 {
-    "Name": "InputModule",
-    "SubFolder": "Assets/Lib",
-    "Url": "https://github.com/RenderHeads/Lib-InputModule",
+    "Name": "MyCoolRepo",
+    "SubFolder": "Assets/FolderToInclude",
+    "Url": "https://github.com/RenderHeads/MyCoolRepo",
     "Branch": "master"
 }
 ```
--  "Name"  - the name of the module you are adding as a depednency
+-  "Name"  - the name of the module you are adding as a dependency
 -  "SubFolder" - the subfolder within the repo you wan to check out
 -  "Url" - The url of the repo to check out
 - "Branch" - the branch in the repo you are checking out.
