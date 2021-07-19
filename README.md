@@ -20,19 +20,6 @@ This is a tool for working on many repositories at once and pushing changes back
   - Find the repository manager under Window/RepositoryManager.
   - You can now add, and update git repository and subfolders via the provided UI.
   
-### Self-Bootstrap Install (allows for you to push changes to teh repository manager)
-
-- Download this repository.
-  - copy "Assets/Package" it into an empty directory structure: "Assets/Repositories/RepositoryManager"
-  - Open the manager window under "Window/Repository Manager"
-  - Click "Add Repository"
-     - Set Url to: "https://github.com/RenderHeads/UnityPlugin-GitSubRepositoryManager"
-     - Set Branch to "master"
-     - Set Name to "RepositoryManager"
-     - Set Subfolder to "Assets/Repositories"
-  - Update it.
-  - You now have a self bootstrapping repo manager. You can make changes and pr them back here ;)
-  
 ### UPM
 
 - Right now no Unity package has been uploaded to the repository. UPM will not work. 
