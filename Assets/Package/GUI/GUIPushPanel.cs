@@ -70,19 +70,20 @@ namespace GitRepositoryManager
 				
 				void Push()
 				{
+					string status = _repo.CreatePrintableStatus(false);
 					if (EditorUtility.DisplayDialog("Commit and Push",
-						$"Commit and push changes from {_localName}:{_repo.Branch} to {_targetUrl}:{_targetBranch}?\n\nChanges:\n{_repo.PrintableStatus}",
+						$"Commit and push changes from {_localName}:{_repo.Branch} to {_targetUrl}:{_targetBranch}?\n\nChanges:\n{status}",
 						"Commit and Push", "Cancel"))
 					{
 						_onPush?.Invoke(_targetBranch, _commitMessage);
 					}
-				
 				}
 			}
 			if (GUI.Button(clearRect,new GUIContent("<b>Clear Changes</b>", "Remove all local changes."), _buttonStyle))
 			{
+				string status = _repo.CreatePrintableStatus(false);
 				if (EditorUtility.DisplayDialog("Clear Local Changes",
-					$"This will permanently remove all local changes, staged and un-staged. Are you sure?\n\nChanges:\n{_repo.PrintableStatus}",
+					$"This will permanently remove all local changes, staged and un-staged. Are you sure?\n\nChanges:\n{status}",
 					"Yes, Remove all local changes", "Cancel"))
 				{
 					_onRemoveChanges?.Invoke();

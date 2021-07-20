@@ -73,7 +73,7 @@ namespace GitRepositoryManager
 		private string _lastStatus = string.Empty;
 		private string _lastPrintableStatus = string.Empty;
 		public string PrintableStatus => _lastPrintableStatus;
-		
+
 		private List<KeyValuePair<string, string>> _statusPrettifyLookup = new List<KeyValuePair<string, string>>()
 		{
 			new KeyValuePair<string, string>("D ", "Deleted"),
@@ -82,8 +82,8 @@ namespace GitRepositoryManager
 			
 		};
 
-		//This is called from multiple threads!
-		private string CreatePrintableStatus()
+		///This is called from multiple threads! May block.
+		public string CreatePrintableStatus(bool collapse)
 		{
 			lock(_lastStatus)
 			{
@@ -93,11 +93,18 @@ namespace GitRepositoryManager
 				}
 				
 				//TODO: make the status pretty: https://git-scm.com/docs/git-status
-				string pathBlurbRemoved = Regex.Replace(_lastStatus, "^Running: 'git status --porcelain' in '.*' ", "");
+				string pathBlurbRemoved = Regex.Replace(_lastStatus, "^Running: 'git status --porcelain' in '.*'", "");
+
+				if (pathBlurbRemoved.Contains("status"))
+				{
+					Debug.Log(pathBlurbRemoved);
+				}
+				
 				string[] lines = pathBlurbRemoved.Split('\n');
 				
 				int lineCount = 0;
 				string formatttedStatus = String.Empty;
+				int numMetaChanged = 0;
 				for(int i = 0; i < lines.Length; i++)
 				{
 					if (string.IsNullOrEmpty(lines[i]))
@@ -105,6 +112,12 @@ namespace GitRepositoryManager
 						continue;
 					}
 
+					if (lines[i].Trim('\"',' ', '\r').EndsWith(".meta") && collapse)
+					{
+						numMetaChanged++;
+						continue;
+					}
+					
 					//Prettify common outputs
 					string line = lines[i].Trim();
 					foreach (var kvp in _statusPrettifyLookup)
@@ -119,6 +132,13 @@ namespace GitRepositoryManager
 					formatttedStatus += $"{line.Trim()}\n";
 					lineCount++;
 				}
+
+				if (numMetaChanged > 0)
+				{
+					formatttedStatus += $"{numMetaChanged} Meta file changes detected.\n";
+					lineCount++;
+				}
+				
 				
 				HasUncommittedChanges = lineCount > 1;
 					
@@ -332,7 +352,7 @@ namespace GitRepositoryManager
 				}
 			}
 			
-			_lastPrintableStatus = CreatePrintableStatus();
+			_lastPrintableStatus = CreatePrintableStatus(true);
 
 			void OnProgress(bool success, string message)
 			{
@@ -369,7 +389,7 @@ namespace GitRepositoryManager
 				}
 			}
 			
-			_lastPrintableStatus = CreatePrintableStatus();
+			_lastPrintableStatus = CreatePrintableStatus(true);
 
 			void OnProgress(bool success, string message)
 			{
