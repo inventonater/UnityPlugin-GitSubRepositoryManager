@@ -153,10 +153,10 @@ namespace GitRepositoryManager
 
             string path = $"{rootDirectory}/{repositoryDirectory}";
             RunCommand(path, $"git add --all", onProgress, out var addOutput);
-            if(!AssertCommandOutput("Running: '", addOutput, onProgress)) { return; }
+            //if(!AssertCommandOutput("Running: '", addOutput, onProgress)) { return; }
             
             RunCommand(path, $"git commit -m \"{message}\"", onProgress, out var commitOutput);
-            if(!AssertCommandOutput("Running: '", commitOutput, onProgress)) { return; }
+            //if(!AssertCommandOutput("Running: '", commitOutput, onProgress)) { return; }
 
             SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
         }
@@ -180,7 +180,7 @@ namespace GitRepositoryManager
 
             string path = $"{rootDirectory}/{repositoryDirectory}";
             RunCommand(path, $"git push origin {branch}", onProgress, out var output);
-            if(!AssertCommandOutput("Running: ' ", output, onProgress)) { return; }
+            //if(!AssertCommandOutput("Running: ' ", output, onProgress)) { return; }
 
             SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
         }
