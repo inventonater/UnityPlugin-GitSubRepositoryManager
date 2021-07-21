@@ -84,6 +84,7 @@ namespace GitRepositoryManager
 		}
 		
 		public volatile bool HasUncommittedChanges;
+		public volatile bool Dirty;
 
 		//TODO: add this functionality!
 		public volatile bool AheadOfOrigin;
@@ -305,6 +306,10 @@ namespace GitRepositoryManager
 			}
 		}
 
+		/// <summary>
+		/// Dequeue from progress queue from main thread.
+		/// </summary>
+		/// <returns></returns>
 		public Progress GetLastProgress()
 		{
 			Progress currentProgress;
@@ -362,6 +367,8 @@ namespace GitRepositoryManager
 					_progressQueue.Enqueue(new Progress(0, message, !success));
 				}
 			}
+
+			Dirty = true;
 		}
 		
 		/// <summary>
@@ -402,6 +409,8 @@ namespace GitRepositoryManager
 					_progressQueue.Enqueue(new Progress(0, message, !success));
 				}
 			}
+			
+			Dirty = true;
 		}
 
 		/// <summary>
@@ -456,6 +465,8 @@ namespace GitRepositoryManager
 					Debug.LogError($"[Repository.UpdateTask] {e.Message}");
 				}
 			}
+			
+			Dirty = true;
 		}
 
 		/// <summary>
@@ -512,9 +523,10 @@ namespace GitRepositoryManager
 					Debug.LogError($"[Repository.PushTask] {e.Message}");
 				}
 			}
+			
+			Dirty = true;
 		}
-
-
+		
 		//TODO: redo for whole folder
 		//TODO: unused. Remove?
 		private void SetIgnore(string parentRoot, string relativeFolderToIgnore, bool ignore)
@@ -545,6 +557,8 @@ namespace GitRepositoryManager
 				//Else we add the ignore string to the end of the file.
 				lines.Add(ignoreString);
 			}
+			
+			Dirty = true;
 		}
 	}
 }

@@ -1,15 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using UnityEditor;
 using UnityEditor.AnimatedValues;
-using UnityEditor.Graphs;
-using UnityEditor.PackageManager;
 using UnityEngine;
-using Debug = System.Diagnostics.Debug;
 
 namespace GitRepositoryManager
 {
@@ -109,10 +101,9 @@ namespace GitRepositoryManager
 		public void OnDrawGUI(int index)
 		{
 			Rect headerRect = EditorGUILayout.GetControlRect(GUILayout.Height(18));
-			Rect fullRect = new Rect();
 			Rect bottomRect = new Rect();
 
-			fullRect = headerRect;
+			Rect fullRect = headerRect;
 
 			//Overlay to darken every second item
 			Rect boxRect = fullRect;
@@ -223,11 +214,13 @@ namespace GitRepositoryManager
 				{
 					OnRemovalRequested(DependencyInfo.Name, DependencyInfo.Url, RelativeRepositoryPath());
 				}
-			};
+			}
+			
 			if (!_repo.InProgress && GUI.Button(editButtonRect, new GUIContent(_editIcon, "Edit this repository"), iconButtonStyle))
 			{
 				OnEditRequested(DependencyInfo, RelativeRepositoryPath());
-			};
+			}
+			
 			if (!updateNeeded)
 			{
 				GUI.enabled = false;
@@ -265,9 +258,11 @@ namespace GitRepositoryManager
 					{
 						ClosePushWindow();
 						_repo.PushChanges(branch, message);
+						PollDirty();
 					}, () =>
 					{
 						_repo.ClearLocalChanges();
+						//PollDirty();
 					});
 				}
 				_pushPanel.OnDrawGUI();
@@ -297,7 +292,7 @@ namespace GitRepositoryManager
 				{
 					UpdateRepository();
 				}
-			};
+			}
 		}
 
 		public bool Busy()
@@ -308,6 +303,7 @@ namespace GitRepositoryManager
 		public void UpdateRepository()
 		{
 			_repo.TryUpdate();
+			PollDirty();
 		}
 
 		public void TogglePushWindow()
@@ -320,6 +316,21 @@ namespace GitRepositoryManager
 		{
 			_expandableAreaAnimBool.target = false;
 			EditorPrefs.SetBool(ExpandableAreaIdentifier, _expandableAreaAnimBool.target);
+		}
+
+		private void PollDirty()
+		{
+			EditorApplication.update += Poll;
+			void Poll()
+			{
+				if (_repo.Dirty)
+				{
+					OnRepaintRequested();
+					_repo.Dirty = false;
+					EditorApplication.update -= Poll;
+				}
+			}
+			
 		}
 	}
 }
