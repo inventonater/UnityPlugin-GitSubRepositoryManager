@@ -80,3 +80,5 @@ sysinfo.txt
 crashlytics-build.properties
 
 Assets/Repositories/
+Screenshots/*
+*.DS_Store
