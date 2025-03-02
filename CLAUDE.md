@@ -18,9 +18,13 @@ Unity plugin for managing git sub-repositories. Provides GUI tools to add, updat
   - GitProcessHelper: Handles git commands execution
   - GUIRepositoryManagerWindow: Main editor window
   - GUIRepositoryPanel/GUIPushPanel: Sub-panels for repository management
+- **Events**: Initialize with `delegate {}` so we can avoid null checking when invoking 
 
 ## Project Structure
 - `/Assets/Package/Core/`: Core functionality (Repository, GitProcessHelper)
 - `/Assets/Package/GUI/`: Unity editor interface components
 - `/Assets/Package/Resources/`: UI resources (icons)
 - `/Assets/Repositories/`: Where managed repositories are stored
+
+## Commits
+- Try to keep it simple, only a few sentences.

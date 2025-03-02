@@ -2,10 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using JetBrains.Annotations;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.WSA;
 
 namespace GitRepositoryManager
 {
