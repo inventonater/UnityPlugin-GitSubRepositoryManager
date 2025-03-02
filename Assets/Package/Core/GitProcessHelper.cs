@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using JetBrains.Annotations;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.WSA;
 
 namespace GitRepositoryManager
@@ -12,6 +13,10 @@ namespace GitRepositoryManager
     public static class GitProcessHelper
     {
         private static readonly object enableRepoLock = new object();
+        
+        // Check platform using Unity's platform detection
+        private static readonly bool IsWindows = Application.platform == RuntimePlatform.WindowsEditor;
+        private static readonly bool IsMacOS = Application.platform == RuntimePlatform.OSXEditor;
         
         public static bool CheckRemoteExists(string url, string branch, Action<bool, string> onProgress)
         {
@@ -71,7 +76,7 @@ namespace GitRepositoryManager
             RunCommand(rootDirectory, $"git clone {url} --filter=blob:none" + (isSparse?" --sparse ":" ") + $"--single-branch --branch {branch} --depth 1 {repositoryDirectory}", onProgress, out var output);
             //   if (!AssertCommandOutput(", done.", output, onProgress)) { return; } //Causing issues sometimes where the clone succeeds but there is no done output! just "..."
             if (!isSparse)  { return; }
-            RunCommand($"{rootDirectory}/{repositoryDirectory}", $"git sparse-checkout set \"{subDirectoryPathRelativeToRepository}\"", onProgress, out output);
+            RunCommand(Path.Combine(rootDirectory, repositoryDirectory), $"git sparse-checkout set \"{subDirectoryPathRelativeToRepository}\"", onProgress, out output);
             AssertCommandOutput("Running: 'git sparse-checkout set", output, onProgress);
             SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
         }
@@ -94,26 +99,43 @@ namespace GitRepositoryManager
         {
             lock (enableRepoLock)
             {
-                string gitPath = $"{rootDirectory}/{repositoryDirectory}/{(enable?".gitsubrepository":".git")}";
-                string destinationGitPath = $"{rootDirectory}/{repositoryDirectory}/{(enable?".git":".gitsubrepository")}";
+                string gitPath = Path.Combine(rootDirectory, repositoryDirectory, enable ? ".gitsubrepository" : ".git");
+                string destinationGitPath = Path.Combine(rootDirectory, repositoryDirectory, enable ? ".git" : ".gitsubrepository");
+                
                 if (Directory.Exists(gitPath))
                 {
-                    onProgress?.Invoke(true, enable?$"Enabling git for {repositoryDirectory}":$"Disabling git for {repositoryDirectory}");
+                    onProgress?.Invoke(true, enable ? $"Enabling git for {repositoryDirectory}" : $"Disabling git for {repositoryDirectory}");
+                    
+                    if (IsMacOS)
+                    {
+                        // On macOS, ensure executable permissions are preserved
+                        // First ensure hooks are executable
+                        string hooksDir = Path.Combine(gitPath, "hooks");
+                        if (Directory.Exists(hooksDir))
+                        {
+                            foreach (var file in Directory.GetFiles(hooksDir))
+                            {
+                                // We use bash to set executable permissions on hook scripts
+                                // This is a no-op on Windows
+                                RunCommand(null, $"chmod +x \"{file}\"", null, out _);
+                            }
+                        }
+                    }
+                    
                     Directory.Move(gitPath, destinationGitPath);
                 }
                 else
                 {
-                    onProgress?.Invoke(true, enable?$"{repositoryDirectory} already enabled.":$"{repositoryDirectory} already disabled.");
+                    onProgress?.Invoke(true, enable ? $"{repositoryDirectory} already enabled." : $"{repositoryDirectory} already disabled.");
                 }
             }
-            
         }
 
         public static void CheckoutBranch(string rootDirectory, string repositoryDirectory,
             string directoryInRepository, string url, string branch, Action<bool, string> onProgress)
         {
             SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
-            string path = $"{rootDirectory}/{repositoryDirectory}";
+            string path = Path.Combine(rootDirectory, repositoryDirectory);
             RunCommand(path, $"git checkout -B {branch}", onProgress, out var output);
             if(!AssertCommandOutput("Running: 'git checkout -B ", output, onProgress)) { return; }
             SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
@@ -123,7 +145,7 @@ namespace GitRepositoryManager
         {
             SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
 
-            string path = $"{rootDirectory}/{repositoryDirectory}";
+            string path = Path.Combine(rootDirectory, repositoryDirectory);
             RunCommand(path, $"git checkout -B {branch}", onProgress, out var output);
             if(!AssertCommandOutput("Running: 'git checkout -B ", output, onProgress)) { return; }
 
@@ -140,7 +162,7 @@ namespace GitRepositoryManager
         {
             SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
 
-            string path = $"{rootDirectory}/{repositoryDirectory}";
+            string path = Path.Combine(rootDirectory, repositoryDirectory);
             RunCommand(path, $"git pull", onProgress, out var output);
            // AssertCommandOutput("TODO", output, onProgress);
            SetEnableRepository(rootDirectory, repositoryDirectory, false, onProgress);
@@ -151,7 +173,7 @@ namespace GitRepositoryManager
         {
             SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
 
-            string path = $"{rootDirectory}/{repositoryDirectory}";
+            string path = Path.Combine(rootDirectory, repositoryDirectory);
             RunCommand(path, $"git add --all", onProgress, out var addOutput);
             //if(!AssertCommandOutput("Running: '", addOutput, onProgress)) { return; }
             
@@ -164,7 +186,7 @@ namespace GitRepositoryManager
         public static string Status(string rootDirectory, string repositoryDirectory, Action<bool, string> onProgress)
         {
             SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
-            string path = $"{rootDirectory}/{repositoryDirectory}";
+            string path = Path.Combine(rootDirectory, repositoryDirectory);
             
             RunCommand(path, $"git status --porcelain", onProgress, out string output);
             
@@ -178,7 +200,7 @@ namespace GitRepositoryManager
         {
             SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
 
-            string path = $"{rootDirectory}/{repositoryDirectory}";
+            string path = Path.Combine(rootDirectory, repositoryDirectory);
             RunCommand(path, $"git push origin {branch}", onProgress, out var output);
             //if(!AssertCommandOutput("Running: ' ", output, onProgress)) { return; }
 
@@ -190,7 +212,7 @@ namespace GitRepositoryManager
         {
             SetEnableRepository(rootDirectory, repositoryDirectory, true, onProgress);
 
-            string path = $"{rootDirectory}/{repositoryDirectory}";
+            string path = Path.Combine(rootDirectory, repositoryDirectory);
             
             RunCommand(path, $"git clean -fd", onProgress, out var cleanOutput);
             RunCommand(path, $"git reset --hard origin/{branch}", onProgress, out var resetOutput);
@@ -202,13 +224,28 @@ namespace GitRepositoryManager
 
         public static void OpenRepositoryInExplorer(string rootDirectory, string repositoryDirectory)
         {
-            string path = $"{rootDirectory}/{repositoryDirectory}";
-            Process.Start(new ProcessStartInfo()
+            string path = Path.Combine(rootDirectory, repositoryDirectory);
+            
+            // Use different approaches based on the platform
+            if (IsMacOS)
             {
-                FileName = path,
-                UseShellExecute = true,
-                Verb = "open"
-            });
+                Process.Start(new ProcessStartInfo()
+                {
+                    FileName = "open",
+                    Arguments = $"\"{path}\"",
+                    UseShellExecute = false
+                });
+            }
+            else
+            {
+                // Default Windows behavior
+                Process.Start(new ProcessStartInfo()
+                {
+                    FileName = path,
+                    UseShellExecute = true,
+                    Verb = "open"
+                });
+            }
             //Leave the process running. User should close it manually.
         }
 
@@ -245,9 +282,20 @@ namespace GitRepositoryManager
             {
                 StringBuilder sb = new StringBuilder();
                 sb.Append($"Running: '{command}' in '{directory}'");
-                onProgress(true, sb.ToString());
+                onProgress?.Invoke(true, sb.ToString());
 
-                ProcessStartInfo procStartInfo = new ProcessStartInfo("cmd", $"/c {command}");
+                ProcessStartInfo procStartInfo;
+                
+                // Set up platform-specific process information
+                if (IsMacOS)
+                {
+                    procStartInfo = new ProcessStartInfo("/bin/bash", $"-c \"{command.Replace("\"", "\\\"")}\"");
+                }
+                else
+                {
+                    // Default Windows behavior
+                    procStartInfo = new ProcessStartInfo("cmd", $"/c {command}");
+                }
 
                 procStartInfo.RedirectStandardError = true;
                 procStartInfo.RedirectStandardInput = true;
@@ -269,14 +317,14 @@ namespace GitRepositoryManager
                 proc.OutputDataReceived += delegate (object sender, DataReceivedEventArgs e)
                 {
                     sb.AppendLine(e.Data);
-                    onProgress(true, e.Data);
+                    onProgress?.Invoke(true, e.Data);
                 };
                 proc.ErrorDataReceived += delegate (object sender, DataReceivedEventArgs e)
                 {
                     sb.AppendLine(e.Data);
                     //http://git.661346.n2.nabble.com/git-push-output-goes-into-stderr-td6758028.html
                     //must consider stderr success as git puts non essential output in stderr
-                    onProgress(true, e.Data);
+                    onProgress?.Invoke(true, e.Data);
                 };
 
                 proc.BeginOutputReadLine();
@@ -284,16 +332,16 @@ namespace GitRepositoryManager
                 proc.WaitForExit();
                 output = sb.ToString();
 
-                https://stackoverflow.com/questions/4917871/does-git-return-specific-return-error-codes
+                // https://stackoverflow.com/questions/4917871/does-git-return-specific-return-error-codes
                 if (proc.ExitCode != 0)
                 {
-                    onProgress(false, output);
+                    onProgress?.Invoke(false, output);
                 }
             }
             catch (Exception objException)
             {
                 output = $"Error in command: '{command}' running in '{directory}', {objException.Message}";
-                onProgress(false, output);
+                onProgress?.Invoke(false, output);
             }
         }
     }

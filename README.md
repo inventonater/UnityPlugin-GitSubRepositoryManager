@@ -62,7 +62,7 @@ _Packages should still be used for third party projects or projects no longer in
 
 # Technology
 
-- Only tested on [Windows](https://www.microsoft.com/en-us/software-download/windows10) (should be quite easy to add mac and Linux support if anyone is interested)
+- Supports [Windows](https://www.microsoft.com/en-us/software-download/windows10) and macOS
 - Tested with [Unity 2019.2](https://unity.com/)
 - c# [.NET standard 2.0](https://docs.microsoft.com/en-us/dotnet/standard/net-standard)
 - Uses c# tasks to run git console commands in a separate thread. Supports 2FA.

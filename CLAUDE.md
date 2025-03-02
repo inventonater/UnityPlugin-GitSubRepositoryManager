@@ -4,7 +4,7 @@
 Unity plugin for managing git sub-repositories. Provides GUI tools to add, update, push, and manage git repositories from within Unity.
 
 ## Build/Run Commands
-- Open in Unity 2019.2+ (Windows supported, Mac/Linux untested)
+- Open in Unity 2019.2+ (Windows and macOS supported)
 - No specific build commands as this is a Unity plugin
 
 ## Code Style Guidelines
