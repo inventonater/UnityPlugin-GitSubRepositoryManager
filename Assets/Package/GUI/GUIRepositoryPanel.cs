@@ -198,9 +198,17 @@ namespace GitRepositoryManager
 				// Enhanced error display with more specific information
 				string errorMsg = "<b><color=red>Failure</color></b>";
 				string tooltip = lastProgress.Message;
+				bool isExpectedError = false;
 				
 				// Provide more helpful error messages
-				if (lastProgress.Message.Contains("not found"))
+				if (lastProgress.Message.Contains("Directory does not exist"))
+				{
+					// This is expected for new repositories, show as info instead of error
+					errorMsg = "<b><color=blue>Ready to clone</color></b>";
+					tooltip = $"Click the pull button to clone {DependencyInfo.Name} from {DependencyInfo.Url}";
+					isExpectedError = true;
+				}
+				else if (lastProgress.Message.Contains("not found"))
 				{
 					errorMsg = "<b><color=red>Repository not found</color></b>";
 					tooltip = $"The repository could not be found. Check that the URL is correct: {DependencyInfo.Url}\n\nOriginal error: {lastProgress.Message}";
@@ -219,7 +227,10 @@ namespace GitRepositoryManager
 				GUI.Label(labelRect, new GUIContent(errorMsg, tooltip), failureStyle);
 				
 				// Log the error to the console for easier debugging
-				Debug.LogError($"[GUIRepositoryPanel] Repository operation failed: {lastProgress.Message}");
+				if (!isExpectedError)
+				{
+					Debug.LogError($"[GUIRepositoryPanel] Repository operation failed: {lastProgress.Message}");
+				}
 			}
 
 			if (!_repo.InProgress)

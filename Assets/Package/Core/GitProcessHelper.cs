@@ -38,21 +38,30 @@ namespace GitRepositoryManager
 
         public static bool RepositoryIsValid(string directory, Action<bool, string> onProgress)
         {
-            bool success = Directory.Exists(directory);
+            // The directory path might be relative, so convert to absolute for consistent handling
+            string absolutePath = Path.IsPathRooted(directory) ? directory : Path.GetFullPath(directory);
+            
+            // Check if the directory exists
+            bool success = Directory.Exists(absolutePath);
             if (!success)
             {
-                onProgress(false, $"Directory does not exist: {directory}");
+                // This is expected for new repositories - log info instead of error
+                onProgress?.Invoke(false, $"Directory does not exist: {absolutePath}");
                 return false;
             }
 
-            success = Directory.Exists(Path.Combine(directory,".git")) || Directory.Exists(Path.Combine(directory,".gitsubrepository"));
+            // Check for git repository markers
+            success = Directory.Exists(Path.Combine(absolutePath, ".git")) || 
+                     Directory.Exists(Path.Combine(absolutePath, ".gitsubrepository"));
+            
             if (success)
             {
-                onProgress(true, $"Repository is valid: {directory}");
+                onProgress?.Invoke(true, $"Repository is valid: {absolutePath}");
                 return true;
             }
 
-            onProgress(false, $".git folder does not exist in: {directory}");
+            // Not a valid git repository
+            onProgress?.Invoke(false, $".git folder does not exist in: {absolutePath}");
             return false;
         }
 
