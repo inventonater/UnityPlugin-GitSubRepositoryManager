@@ -230,11 +230,17 @@ namespace GitRepositoryManager
 			if(!_inProgress)
 			{
 				_inProgress = true;
+				// Add an initial progress message to show the operation has started
+				_progressQueue.Enqueue(new Progress(0.1f, $"Starting update for {_state.RepositoryFolder}...", false));
+				Dirty = true;
+				
 				ThreadPool.QueueUserWorkItem(UpdateTask, _state);
+				Debug.Log($"[Repository] Starting update for {_state.RepositoryFolder} from {_state.Url}");
 				return true;
 			}
 			else
 			{
+				Debug.LogWarning($"[Repository] Cannot update {_state.RepositoryFolder} - operation already in progress");
 				return false;
 			}
 		}
@@ -428,17 +434,26 @@ namespace GitRepositoryManager
 
 					if (state == null)
 					{
-						_progressQueue.Enqueue(new Progress(0, "Repository state info is null", true));
+						string errorMsg = "Repository state info is null";
+						_progressQueue.Enqueue(new Progress(0, errorMsg, true));
+						Debug.LogError($"[Repository.UpdateTask] {errorMsg}");
+						_inProgress = false;
 						return;
 					}
 
-					if (GitProcessHelper.RepositoryIsValid(state.RepositoryFolder, OnProgress))
+					Debug.Log($"[Repository.UpdateTask] Processing repository: {state.RepositoryFolder} (URL: {state.Url}, Branch: {state.Branch})");
+					
+					bool repositoryExists = GitProcessHelper.RepositoryIsValid(state.RepositoryFolder, OnProgress);
+					
+					if (repositoryExists)
 					{
+						Debug.Log($"[Repository.UpdateTask] Updating existing repository: {state.RepositoryFolder}");
 						GitProcessHelper.UpdateRepository(state.RootFolder, state.RepositoryFolder,
 							state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
 					}
 					else
 					{
+						Debug.Log($"[Repository.UpdateTask] Adding new repository: {state.RepositoryFolder}");
 						GitProcessHelper.AddRepository(state.RootFolder, state.RepositoryFolder,
 							state.DirectoryInRepository, state.Url, state.Branch, OnProgress);
 					}
@@ -446,10 +461,30 @@ namespace GitRepositoryManager
 					//Once completed
 					if (_progressQueue.Count > 0)
 					{
+						var lastProgress = _progressQueue.ToArray()[_progressQueue.Count - 1];
 						//Get the latest progress
-						if (!_progressQueue.ToArray()[_progressQueue.Count - 1].Error)
+						if (!lastProgress.Error)
 						{
 							_refreshPending = true;
+							Debug.Log($"[Repository.UpdateTask] Successfully completed operation on {state.RepositoryFolder}");
+						}
+						else
+						{
+							Debug.LogError($"[Repository.UpdateTask] Failed operation on {state.RepositoryFolder}: {lastProgress.Message}");
+							
+							// Provide troubleshooting tips based on common errors
+							if (lastProgress.Message.Contains("not found"))
+							{
+								Debug.LogError($"[Repository.UpdateTask] Repository not found. Check that the URL is correct: {state.Url}");
+							}
+							else if (lastProgress.Message.Contains("Permission denied"))
+							{
+								Debug.LogError($"[Repository.UpdateTask] Permission denied. Check that you have access to this repository and SSH keys are configured correctly.");
+							}
+							else if (lastProgress.Message.Contains("network") || lastProgress.Message.Contains("timeout"))
+							{
+								Debug.LogError($"[Repository.UpdateTask] Network error. Check your internet connection and try again.");
+							}
 						}
 					}
 
@@ -457,12 +492,21 @@ namespace GitRepositoryManager
 
 					void OnProgress(bool success, string message)
 					{
-						_progressQueue.Enqueue(new Progress(0, message, !success));
+						float progress = success ? 0.5f : 0; // Better progress visualization
+						_progressQueue.Enqueue(new Progress(progress, message, !success));
+						
+						if (!success)
+						{
+							Debug.LogWarning($"[Repository.UpdateTask] Progress warning: {message}");
+						}
 					}
 				}
 				catch (Exception e)
 				{
-					Debug.LogError($"[Repository.UpdateTask] {e.Message}");
+					string errorMsg = $"[Repository.UpdateTask] Exception: {e.Message}\n{e.StackTrace}";
+					Debug.LogError(errorMsg);
+					_progressQueue.Enqueue(new Progress(0, $"Error: {e.Message}", true));
+					_inProgress = false;
 				}
 			}
 			

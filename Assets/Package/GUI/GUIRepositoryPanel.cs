@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using UnityEditor;
 using UnityEditor.AnimatedValues;
 using UnityEngine;
@@ -193,7 +194,32 @@ namespace GitRepositoryManager
 				GUIStyle failureStyle = new GUIStyle(EditorStyles.label);
 				failureStyle.richText = true;
 				failureStyle.alignment = TextAnchor.MiddleRight;
-				GUI.Label(labelRect, new GUIContent("<b><color=red>Failure</color></b>", lastProgress.Message), failureStyle);
+				
+				// Enhanced error display with more specific information
+				string errorMsg = "<b><color=red>Failure</color></b>";
+				string tooltip = lastProgress.Message;
+				
+				// Provide more helpful error messages
+				if (lastProgress.Message.Contains("not found"))
+				{
+					errorMsg = "<b><color=red>Repository not found</color></b>";
+					tooltip = $"The repository could not be found. Check that the URL is correct: {DependencyInfo.Url}\n\nOriginal error: {lastProgress.Message}";
+				}
+				else if (lastProgress.Message.Contains("Permission denied"))
+				{
+					errorMsg = "<b><color=red>Permission denied</color></b>";
+					tooltip = $"You don't have access to this repository. Check your credentials or SSH keys.\n\nOriginal error: {lastProgress.Message}";
+				}
+				else if (lastProgress.Message.Contains("network") || lastProgress.Message.Contains("timeout"))
+				{
+					errorMsg = "<b><color=red>Network error</color></b>";
+					tooltip = $"A network error occurred. Check your internet connection.\n\nOriginal error: {lastProgress.Message}";
+				}
+				
+				GUI.Label(labelRect, new GUIContent(errorMsg, tooltip), failureStyle);
+				
+				// Log the error to the console for easier debugging
+				Debug.LogError($"[GUIRepositoryPanel] Repository operation failed: {lastProgress.Message}");
 			}
 
 			if (!_repo.InProgress)
@@ -279,18 +305,41 @@ namespace GitRepositoryManager
 			GUIStyle iconButtonStyle = new GUIStyle( EditorStyles.miniButton);
 			iconButtonStyle.padding = new RectOffset(3,3,3,3);
 
-			if (GUI.Button(rect, new GUIContent(_pullIcon, "Pull or clone into project."), iconButtonStyle))
+			string tooltipText = updateNeeded 
+				? "Pull or clone into project. WARNING: This will discard local changes!" 
+				: "Pull or clone into project.";
+
+			if (GUI.Button(rect, new GUIContent(_pullIcon, tooltipText), iconButtonStyle))
 			{
-				if (updateNeeded)
+				try
 				{
-					if (EditorUtility.DisplayDialog("Local Changes Detected", DependencyInfo.Name + " has local changes. Updating will permanently delete them. Continue?", "Yes", "No"))
+					if (updateNeeded)
 					{
+						if (EditorUtility.DisplayDialog("Local Changes Detected", 
+							$"{DependencyInfo.Name} has local changes. Updating will permanently delete them.\n\nStatus:\n{_repo.PrintableStatus}\n\nContinue?", 
+							"Yes", "No"))
+						{
+							UpdateRepository();
+							Debug.Log($"[GUIRepositoryPanel] Update initiated for {DependencyInfo.Name} (with local changes)");
+						}
+						else
+						{
+							Debug.Log($"[GUIRepositoryPanel] Update cancelled for {DependencyInfo.Name} due to local changes");
+						}
+					}
+					else
+					{
+						Debug.Log($"[GUIRepositoryPanel] Update initiated for {DependencyInfo.Name}");
 						UpdateRepository();
 					}
 				}
-				else
+				catch (Exception ex)
 				{
-					UpdateRepository();
+					// Log exception and show an error dialog
+					Debug.LogError($"[GUIRepositoryPanel] Error updating repository {DependencyInfo.Name}: {ex.Message}\n{ex.StackTrace}");
+					EditorUtility.DisplayDialog("Repository Update Failed", 
+						$"Failed to update {DependencyInfo.Name}. Check console for details.\n\nError: {ex.Message}", 
+						"OK");
 				}
 			}
 		}
@@ -302,8 +351,49 @@ namespace GitRepositoryManager
 
 		public void UpdateRepository()
 		{
-			_repo.TryUpdate();
-			PollDirty();
+			try
+			{
+				// Create the repositories directory if it doesn't exist
+				string repoDirectory = Path.Combine(RootFolder(), "Assets", "Repositories");
+				if (!Directory.Exists(repoDirectory))
+				{
+					Directory.CreateDirectory(repoDirectory);
+					Debug.Log($"[GUIRepositoryPanel] Created repositories directory: {repoDirectory}");
+				}
+				
+				// Ensure repository folder exists
+				string fullRepoPath = Path.Combine(RootFolder(), RelativeRepositoryPath());
+				if (!Directory.Exists(Path.GetDirectoryName(fullRepoPath)))
+				{
+					Directory.CreateDirectory(Path.GetDirectoryName(fullRepoPath));
+					Debug.Log($"[GUIRepositoryPanel] Created repository parent directory: {Path.GetDirectoryName(fullRepoPath)}");
+				}
+				
+				// Start the update process
+				bool updateStarted = _repo.TryUpdate();
+				
+				if (updateStarted)
+				{
+					Debug.Log($"[GUIRepositoryPanel] Repository update initiated for {DependencyInfo.Name}");
+					PollDirty();
+				}
+				else
+				{
+					Debug.LogWarning($"[GUIRepositoryPanel] Repository update could not be started for {DependencyInfo.Name} - operation already in progress");
+					EditorUtility.DisplayDialog("Operation In Progress", 
+						$"An operation is already in progress for {DependencyInfo.Name}. Please wait for it to complete.", 
+						"OK");
+				}
+			}
+			catch (Exception ex)
+			{
+				string errorMsg = $"[GUIRepositoryPanel] Error starting repository update: {ex.Message}\n{ex.StackTrace}";
+				Debug.LogError(errorMsg);
+				
+				EditorUtility.DisplayDialog("Update Failed", 
+					$"Failed to start update for {DependencyInfo.Name}. Check the console for details.\n\nError: {ex.Message}", 
+					"OK");
+			}
 		}
 
 		public void TogglePushWindow()
