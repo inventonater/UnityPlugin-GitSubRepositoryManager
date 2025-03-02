@@ -52,7 +52,7 @@ This is where sparse checkout comes in. The approach we take is to sparse checko
 Originally, this project was based on a repository cache, where the files were manually synced between the project and the repository, but since then sparse checkout has matured and we have refactored to use it inline, which has proved a lot simpler.
 
 ##### How do you have a git repository inside another one?
-We have chosen to programatically rename the .git folder to .gitsubmodule when no git commands are running on the subrepositories. The .gitsubmodule repository is treted like a normal folder, and can be committed to the parent repository without issue. You could ignore the sub repository in the parent repo if thats the behaviour you desire.
+We have chosen to programmatically rename the .git folder to .gitsubrepository when no git commands are running on the subrepositories. The .gitsubrepository folder is treated like a normal directory, and can be committed to the parent repository without issue. You could ignore the sub repository in the parent repo if that's the behavior you desire.
 
 ### In Summary
 Updating multiple repositories is slow, monoliths are bad. We need a way to update multiple repositories fast.
